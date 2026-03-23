@@ -1,0 +1,708 @@
+/* Paleta de Cores Personalizada para Login */
+
+:root {
+  --color-gold: #D4AF37;
+  --color-beige: #F0EBDC;
+  --color-primary: #C92924;
+  --color-primary-dark: #A02219;
+}
+
+/* Animação suave de entrada */
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Card de Login - Centralizado com espaçamento */
+.glass-card-golden {
+  animation: slideInUp 0.6s ease-out;
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 2px solid var(--color-gold) !important;
+  border-radius: 16px;
+  padding: 3rem;
+  width: 100%;
+  max-width: 32rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+/* Rótulos de Formulário */
+.glass-card-golden label {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  display: block;
+  margin-bottom: 0.5rem;
+  text-align: left;
+}
+
+.glass-card-golden h1 {
+  color: var(--color-primary) !important;
+}
+
+.glass-card-golden h1 + p {
+  color: var(--color-primary) !important;
+}
+
+.glass-card-golden p {
+  color: var(--color-primary) !important;
+}
+
+/* ================================================
+   CAIXINHA PROMOCIONAL
+   ================================================ */
+
+.glass-card-golden > div[class*="mt-3"] {
+  background-size: cover;
+  background-position: right center;
+  background-repeat: no-repeat;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  border-radius: 12px;
+  padding: 1.5rem 2rem;
+  margin-top: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 1rem;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  min-height: 180px;
+}
+
+.glass-card-golden > div[class*="mt-3"]:hover {
+  box-shadow: 0 4px 12px rgba(201, 41, 36, 0.1);
+  border-color: rgba(212, 175, 55, 0.4);
+}
+
+.glass-card-golden > div[class*="mt-3"] > div:first-child {
+  background: linear-gradient(to right, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.7));
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 12px;
+}
+
+.glass-card-golden > div[class*="mt-3"] > div:last-child {
+  position: relative;
+  z-index: 10;
+  flex: 1;
+  padding-right: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.glass-card-golden > div[class*="mt-3"] p {
+  color: var(--color-primary) !important;
+  font-size: 1.125rem;
+  line-height: 1.5;
+  margin: 0;
+  font-weight: 600;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  text-align: left;
+}
+
+/* Campos de Entrada */
+.glass-card-golden input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+  color: var(--color-primary);
+  box-sizing: border-box;
+  transition: all 0.3s ease;
+}
+
+.glass-card-golden input::placeholder {
+  color: #999;
+}
+
+.glass-card-golden input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  background-color: #fff;
+  box-shadow: 0 0 0 3px rgba(201, 41, 36, 0.1);
+}
+
+/* Efeitos de foco aprimorados */
+.glass-card-golden input:focus::placeholder {
+  opacity: 0.3;
+}
+
+/* Espaçamento entre elementos do formulário */
+.glass-card-golden .space-y-1 > * + * {
+  margin-top: 0.25rem;
+}
+
+.glass-card-golden form > div + div {
+  margin-top: 1rem;
+}
+
+/* Botões */
+.glass-card-golden button,
+.glass-card-golden a[class*="btn-"] {
+  width: 100%;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  box-sizing: border-box;
+}
+
+/* Efeito de profundidade no botão */
+.button-depth {
+  position: relative;
+  transform: translateZ(0);
+  box-shadow: 0 4px 0 var(--color-primary);
+}
+
+.button-depth:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 var(--color-primary);
+}
+
+.button-depth:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 var(--color-primary);
+}
+
+/* Borda dourada brilhante */
+.golden-border {
+  position: relative;
+  overflow: hidden;
+}
+
+.golden-border::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+  animation: shine 3s infinite;
+}
+
+@keyframes shine {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* Sombra interna sutil */
+.glass-card-golden::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+  border-radius: 16px 16px 0 0;
+}
+
+/* Melhoria de acessibilidade */
+@media (prefers-reduced-motion: reduce) {
+  .glass-card-golden,
+  .glass-card-golden input:focus,
+  .button-depth:hover {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* Responsividade */
+@media (max-width: 1024px) {
+  .glass-card-golden {
+    max-width: 100%;
+    padding: 2.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .glass-card-golden {
+    padding: 2rem;
+    max-width: 90%;
+  }
+
+  .glass-card-golden label {
+    font-size: 0.95rem;
+  }
+
+  .glass-card-golden input {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 640px) {
+  .glass-card-golden {
+    padding: 1.5rem;
+    max-width: 100%;
+  }
+
+  .glass-card-golden label {
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  .glass-card-golden h1 {
+    font-size: 1.75rem;
+  }
+
+  .glass-card-golden img {
+    height: 150px;
+    width: 150px;
+  }
+}
+
+/* ================================================
+   SEÇÃO 1: BRANDING
+   ================================================ */
+
+.login-header {
+  text-align: center;
+  margin-bottom: 2rem;
+  animation: slideInDown 0.6s ease-out;
+}
+
+.brand-name {
+  font-size: 2.5rem;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  margin: 0;
+  line-height: 1.1;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.brand-tagline {
+  font-size: 0.875rem;
+  font-weight: 300;
+  letter-spacing: 0.08em;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  margin: 0.5rem 0 0 0;
+  line-height: 1.4;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* ================================================
+   SEÇÃO 2: SAUDAÇÃO
+   ================================================ */
+
+.login-greeting {
+  text-align: center;
+  margin-bottom: 2rem;
+  animation: slideInUp 0.6s ease-out 0.1s both;
+}
+
+.greeting-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  margin: 0;
+  text-transform: capitalize;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* ================================================
+   SEÇÃO 3: FORMULÁRIO
+   ================================================ */
+
+.login-form {
+  width: 100%;
+  max-width: 450px;
+  margin-bottom: 1.5rem;
+  animation: slideInUp 0.6s ease-out 0.2s both;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.form-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  text-transform: capitalize;
+  margin: 0;
+  display: block;
+  margin-bottom: 0.5rem;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.forgot-password {
+  font-size: 0.75rem;
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s ease;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.forgot-password:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  font-size: 0.95rem;
+  border: 1px solid var(--color-gray-light);
+  border-radius: 8px;
+  background-color: var(--color-white);
+  color: var(--color-primary);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  box-sizing: border-box;
+  transition: all 0.3s ease;
+}
+
+.form-input::placeholder {
+  color: var(--color-gray);
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(201, 41, 36, 0.1);
+  background-color: var(--color-white);
+}
+
+/* ================================================
+   SEÇÃO 4: MENSAGEM DE ERRO
+   ================================================ */
+
+.error-message {
+  padding: 0.875rem;
+  background-color: rgba(229, 62, 62, 0.1);
+  border: 1px solid var(--color-error);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.error-message p {
+  margin: 0;
+  color: var(--color-error);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* ================================================
+   SEÇÃO 5: BOTÕES
+   ================================================ */
+
+.btn-primary {
+  width: 100%;
+  padding: 0.875rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-white);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(201, 41, 36, 0.25);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  margin-bottom: 1rem;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary-darker) 100%);
+  box-shadow: 0 6px 16px rgba(201, 41, 36, 0.35);
+  transform: translateY(-2px);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(201, 41, 36, 0.25);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.signup-intro {
+  text-align: center;
+  font-size: 0.95rem;
+  color: var(--color-primary);
+  margin: 0 0 0.75rem 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.btn-secondary {
+  display: block;
+  width: 100%;
+  padding: 0.875rem 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  text-align: center;
+  text-decoration: none;
+  color: var(--color-primary);
+  background-color: var(--color-white);
+  border: 2px solid var(--color-gray-light);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  box-sizing: border-box;
+}
+
+.btn-secondary:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background-color: rgba(201, 41, 36, 0.05);
+}
+
+.btn-secondary:active {
+  transform: translateY(0);
+  background-color: rgba(201, 41, 36, 0.1);
+}
+
+/* ================================================
+   SEÇÃO 6: INFORMAÇÕES LEGAIS
+   ================================================ */
+
+.legal-info {
+  max-width: 450px;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--color-primary);
+  margin: 1.5rem 0;
+  line-height: 1.6;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.legal-info p {
+  margin: 0;
+}
+
+.legal-link {
+  color: var(--color-primary);
+  text-decoration: underline;
+  cursor: pointer;
+  transition: color 0.3s ease;
+  font-weight: 500;
+}
+
+.legal-link:hover {
+  color: var(--color-primary-dark);
+}
+
+/* ================================================
+   SEÇÃO 7: CAIXA PROMOCIONAL
+   ================================================ */
+
+.promo-box {
+  max-width: 450px;
+  width: 100%;
+  background-color: var(--color-beige);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin: 1.5rem 0;
+  border: 1px solid rgba(201, 41, 36, 0.1);
+  animation: slideInUp 0.6s ease-out 0.3s both;
+}
+
+.promo-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  text-align: center;
+}
+
+.promo-text {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  margin: 0;
+  text-transform: capitalize;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.promo-image {
+  width: 120px;
+  height: auto;
+  max-height: 120px;
+  object-fit: contain;
+  border-radius: 8px;
+  transition: transform 0.3s ease;
+}
+
+.promo-image:hover {
+  transform: scale(1.05);
+}
+
+/* ================================================
+   SEÇÃO 8: CONTAS DE TESTE
+   ================================================ */
+
+.test-accounts {
+  max-width: 450px;
+  width: 100%;
+  text-align: center;
+  background-color: rgba(201, 41, 36, 0.05);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 1.5rem;
+  border: 1px solid rgba(201, 41, 36, 0.1);
+}
+
+.test-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  text-transform: capitalize;
+  margin: 0 0 0.75rem 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.test-credentials {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.test-credentials p {
+  font-size: 0.8rem;
+  color: var(--color-primary);
+  margin: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  word-break: break-word;
+}
+
+/* ================================================
+   ANIMAÇÕES
+   ================================================ */
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ================================================
+   ACESSIBILIDADE
+   ================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ================================================
+   RESPONSIVIDADE
+   ================================================ */
+
+@media (max-width: 1023px) {
+  .login-image-side {
+    display: none;
+  }
+
+  .login-wrapper {
+    flex-direction: column;
+  }
+
+  .login-panel {
+    flex: 1;
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .login-panel {
+    padding: 1rem;
+  }
+
+  .brand-name {
+    font-size: 2rem;
+  }
+
+  .brand-tagline {
+    font-size: 0.75rem;
+  }
+
+  .greeting-title {
+    font-size: 1.25rem;
+  }
+
+  .login-form {
+    max-width: 100%;
+  }
+
+  .form-input {
+    font-size: 16px; /* Previne zoom automático no iPhone */
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .promo-box {
+    max-width: 100%;
+  }
+
+  .promo-image {
+    width: 100px;
+  }
+
+  .test-accounts {
+    max-width: 100%;
+  }
+
+  .legal-info {
+    max-width: 100%;
+  }
+}
