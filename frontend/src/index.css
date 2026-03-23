@@ -17,11 +17,16 @@
   box-sizing: border-box;
 }
 
+html {
+  background-color: #FFF8E7;
+}
+
 body {
   margin: 0;
   font-family: var(--font-family-sans);
   color: var(--color-dark);
   -webkit-font-smoothing: antialiased;
+  background-color: #FFF8E7;
 }
 
 /* Animações */
@@ -78,3 +83,244 @@ body {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* Glassmorfismo - Card com efeito de vidro */
+.glass-card {
+  background: rgba(253, 248, 240, 0.95);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border: 1.5px solid #D2C6B9;
+  border-radius: 24px;
+  padding: 2.5rem;
+  box-shadow: 0 12px 40px 0 rgba(74, 63, 53, 0.15);
+  animation: slide-in-up 0.6s ease-out;
+}
+
+/* Efeito hover no glass card */
+.glass-card:hover {
+  box-shadow: 0 16px 50px 0 rgba(74, 63, 53, 0.2);
+  border-color: #C2B6A9;
+  transition: all 0.3s ease-out;
+}
+
+/* ========== NOVO: Glass Card Dourado ========== */
+.glass-card-golden {
+  background: rgba(240, 235, 220, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 2px solid #D4AF37;
+  border-radius: 28px;
+  padding: 0.75rem 1.5rem;
+  box-shadow: 
+    0 16px 50px 0 rgba(107, 29, 29, 0.2),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.6);
+  animation: slide-in-up 0.6s ease-out;
+}
+
+.glass-card-golden:hover {
+  box-shadow: 
+    0 20px 60px 0 rgba(107, 29, 29, 0.3),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.8);
+  border-color: #E6C200;
+  transition: all 0.3s ease-out;
+}
+
+/* Input refinado com glassmorfismo dourado */
+.glass-card-golden input,
+.glass-card-golden textarea,
+.glass-card-golden select {
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid #D4AF37;
+  transition: all 0.3s ease;
+  color: #6B1D1D;
+  font-family: inherit;
+  font-size: 0.875rem;
+}
+
+.glass-card-golden input::placeholder {
+  color: rgba(107, 29, 29, 0.5);
+  font-size: 0.875rem;
+}
+
+.glass-card-golden input:focus,
+.glass-card-golden textarea:focus,
+.glass-card-golden select:focus {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: #D4AF37;
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
+  outline: none;
+}
+
+/* Label dos inputs - reduzido */
+.glass-card-golden label {
+  color: #6B1D1D;
+  font-weight: 600;
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
+}
+
+/* Gap entre label e input reduzido */
+.glass-card-golden > div > div {
+  gap: 0.25rem !important;
+}
+
+/* Botão com profundidade */
+.button-depth {
+  background: linear-gradient(135deg, #C92924 0%, #A02219 100%);
+  position: relative;
+  box-shadow: 
+    0 4px 0 #6B1D1D,
+    0 8px 12px rgba(107, 29, 29, 0.3);
+  transition: all 0.2s ease;
+}
+
+.button-depth:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 6px 0 #6B1D1D,
+    0 12px 20px rgba(107, 29, 29, 0.4);
+}
+
+.button-depth:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 
+    0 2px 0 #6B1D1D,
+    0 4px 8px rgba(107, 29, 29, 0.2);
+}
+
+.button-depth:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Textos dentro do card dourado */
+.glass-card-golden h1,
+.glass-card-golden h2,
+.glass-card-golden h3,
+.glass-card-golden h4,
+.glass-card-golden h5,
+.glass-card-golden h6,
+.glass-card-golden p {
+  color: #6B1D1D;
+}
+
+.glass-card-golden a {
+  color: #C92924;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.glass-card-golden a:hover {
+  color: #A02219;
+}
+
+/* Divisores */
+.glass-card-golden .border-t {
+  border-color: #D4AF37;
+}
+
+/* Input refinado com glassmorfismo */
+.glass-card input,
+.glass-card textarea,
+.glass-card select {
+  background: #F9F3E9;
+  border: 1.5px solid #D2C6B9;
+  transition: all 0.3s ease;
+  color: #4A3F35;
+  font-family: inherit;
+}
+
+.glass-card input::placeholder {
+  color: rgba(74, 63, 53, 0.6);
+}
+
+.glass-card input:focus,
+.glass-card textarea:focus,
+.glass-card select:focus {
+  background: #FDF8F0;
+  border-color: #C92924;
+  box-shadow: 0 0 0 3px #E6DCCF;
+  outline: none;
+}
+
+/* Label dos inputs */
+.glass-card label {
+  color: #4A3F35;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+/* Botão com mais impacto */
+.glass-card button[type="submit"] {
+  background: linear-gradient(135deg, #C92924 0%, #A02219 100%);
+  transition: all 0.3s ease;
+  border: none;
+  color: white;
+  font-weight: 600;
+}
+
+.glass-card button[type="submit"]:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(201, 41, 36, 0.4);
+}
+
+.glass-card button[type="submit"]:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Textos dentro do card */
+.glass-card h1,
+.glass-card h2,
+.glass-card h3,
+.glass-card h4,
+.glass-card h5,
+.glass-card h6,
+.glass-card p {
+  color: #4A3F35;
+}
+
+.glass-card a {
+  color: #C92924;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.glass-card a:hover {
+  color: #A02219;
+}
+
+/* Divisores */
+.glass-card .border-t {
+  border-color: #D2C6B9;
+}
+
+/* Caixa de informações (contas de teste) */
+.glass-card > div:last-child {
+  background: #E6DCCF;
+  border-color: #D2C6B9;
+  color: #4A3F35;
+}
+
+/* Texto das contas de teste bem pequeno */
+.glass-card-golden .text-xs {
+  font-size: 0.7rem;
+  line-height: 1.2;
+}
+
+.glass-card-golden strong {
+  font-weight: 700;
+}
+
+
+/* Imagem da logo com máxima clareza */
+.sharp-image {
+  image-rendering: high-quality;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  -ms-interpolation-mode: nearest-neighbor;
+  filter: brightness(1.05) contrast(1.1);
+  display: block;
+  max-width: 100%;
+}
+
