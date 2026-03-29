@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Input, Button } from '../components/shared';
+import { Input, Button } from '../../components/shared';
+import { authService } from '../../services/api';
 import './RestaurantLogin.css';
 
 export default function RestaurantLogin() {
@@ -15,16 +16,19 @@ export default function RestaurantLogin() {
     setError('');
     setLoading(true);
 
-    // TODO: Implementar login real no backend
-    const success = Math.random() > 0.5; // Mock login
+    try {
+      const response = await authService.login(email, password);
 
-    if (success) {
-      navigate('/admin/dashboard');
-    } else {
-      setError('Email ou senha inválidos');
+      if (response.success && response.user?.type === 'admin') {
+        navigate('/admin/dashboard');
+      } else {
+        setError(response.message || 'Email ou senha inválidos');
+      }
+    } catch (err) {
+      setError('Erro ao conectar. Tente novamente.');
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
@@ -34,7 +38,7 @@ export default function RestaurantLogin() {
         <div 
           className="image-background"
           style={{
-            backgroundImage: 'url(/imagem.png)',
+            backgroundImage: 'url(/assets/imagem.png)',
             backgroundSize: 'cover',
             backgroundPosition: 'center'
           }}
@@ -100,7 +104,7 @@ export default function RestaurantLogin() {
           {/* Banner de Upgrade */}
           <div className="mt-6">
             <img 
-              src="/caixinha.png" 
+              src="/assets/caixinha.png" 
               alt="Upgrade Banner" 
               className="w-full rounded-xl shadow-lg upgrade-banner"
             />

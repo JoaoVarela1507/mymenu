@@ -706,3 +706,25 @@
     max-width: 100%;
   }
 }
+
+/* ================================================
+   CORREÇÃO DO CHECKBOX - SOBRESCREVE display: block
+   ================================================ */
+.checkbox-terms {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px;
+}
+
+.checkbox-terms input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #C92924;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.checkbox-terms span {
+  display: inline;
+}

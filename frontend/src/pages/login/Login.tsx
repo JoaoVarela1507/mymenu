@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { Input, Button } from '../components/shared';
+import { useAuth } from '../../contexts/AuthContext';
+import { Input, Button } from '../../components/shared';
 import './Login.css';
 
 export default function Login() {
@@ -32,7 +32,7 @@ export default function Login() {
     <div 
       className="min-h-screen w-full relative overflow-hidden flex"
       style={{
-        backgroundImage: 'url(/imagem.png)',
+        backgroundImage: 'url(/assets/imagem.png)',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundAttachment: 'fixed'
@@ -50,7 +50,7 @@ export default function Login() {
         <div className="text-center mb-2">
           <div className="-mt-2 mb-2 flex justify-center items-center">
             <img 
-              src="/logo.png" 
+              src="/assets/logo.png" 
               alt="MyMenu Logo" 
               className="w-72 h-auto object-contain object-center sharp-image"
             />
@@ -105,14 +105,14 @@ export default function Login() {
 
         <div className="text-center mt-1.5 pt-1 border-t border-[#D4AF37]/30">
           <p className="text-[#C92924]/70 text-xs mb-0.5">Ainda não é cadastrado?</p>
-          <Link to="/cadastro" style={{ backgroundColor: '#FFF8E7', color: '#C92924' }} className="inline-block w-full border-2 border-gray-300 font-bold text-xs py-1.5 px-4 rounded-lg hover:border-[#D4AF37] transition-colors mt-2">
+          <Link to="/cadastro" style={{ backgroundColor: '#FFF8E7', color: '#C92924' }} className="inline-block w-full border-2 border-gray-300 font-bold text-xs py-2 px-4 rounded-lg hover:border-[#D4AF37] transition-colors mt-2">
             Fazer cadastro
           </Link>
         </div>
 
         {/* Caixinha Promocional */}
         <div className="mt-3 p-6 rounded-xl flex items-center justify-start relative overflow-hidden border border-[#D4AF37]/20" style={{
-          backgroundImage: 'url(/caixinha.png)',
+          backgroundImage: 'url(/assets/caixinha.png)',
           backgroundSize: 'cover',
           backgroundPosition: 'right center',
           backgroundRepeat: 'no-repeat',
