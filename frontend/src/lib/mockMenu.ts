@@ -9,6 +9,7 @@ export const mockCategories: MenuCategory[] = [
 export const mockMenuItems: MenuItem[] = [
   {
     id: 'item-1',
+    restaurantId: 'rest-1',
     name: 'Pizza Margherita',
     description: 'A combinação atemporal de molho de tomate pelati, muçarela derretida e folhas frescas de manjericão, finalizada com um fio de azeite de oliva extra virgem.',
     ingredients: 'Molho de tomate, mussarela, manjericão e azeite',
@@ -25,6 +26,7 @@ export const mockMenuItems: MenuItem[] = [
   },
   {
     id: 'item-2',
+    restaurantId: 'rest-1',
     name: 'Pizza Calabresa',
     description: 'Sabor marcante da calabresa artesanal com cebola roxa caramelizada sobre generosa camada de mussarela.',
     ingredients: 'Molho de tomate, mussarela, calabresa e cebola',
@@ -40,6 +42,7 @@ export const mockMenuItems: MenuItem[] = [
   },
   {
     id: 'item-3',
+    restaurantId: 'rest-1',
     name: 'Pizza Portuguesa',
     description: 'Uma explosão de sabores com presunto, ovos, cebola e azeitonas pretas sobre nossa massa artesanal.',
     ingredients: 'Molho de tomate, mussarela, presunto, ovos, cebola e azeitonas',
@@ -56,6 +59,7 @@ export const mockMenuItems: MenuItem[] = [
   },
   {
     id: 'item-4',
+    restaurantId: 'rest-1',
     name: 'Pizza Especial da Casa',
     description: 'Nossa criação exclusiva que combina ingredientes premium selecionados pelo chef. Uma experiência gastronômica única que só você encontra aqui.',
     ingredients: 'Molho especial da casa, mussarela de búfala, tomate seco, rúcula, parmesão e azeite trufado',
@@ -70,6 +74,7 @@ export const mockMenuItems: MenuItem[] = [
   },
   {
     id: 'item-5',
+    restaurantId: 'rest-1',
     name: 'Refrigerante 2L',
     description: 'Bebida gelada perfeita para acompanhar sua refeição. Escolha entre Coca-Cola, Guaraná Antarctica ou Fanta Laranja.',
     ingredients: 'Refrigerante 2 litros - Coca-Cola, Guaraná ou Fanta',
@@ -85,6 +90,7 @@ export const mockMenuItems: MenuItem[] = [
   },
   {
     id: 'item-6',
+    restaurantId: 'rest-1',
     name: 'Suco Natural 500ml',
     description: 'Suco 100% natural feito na hora com frutas frescas selecionadas. Opções: laranja, limão ou morango.',
     ingredients: 'Frutas frescas (laranja, limão ou morango) e água',
@@ -99,6 +105,7 @@ export const mockMenuItems: MenuItem[] = [
   },
   {
     id: 'item-7',
+    restaurantId: 'rest-1',
     name: 'Água Mineral',
     description: 'Água mineral pura e refrescante. Disponível com ou sem gás, sempre gelada.',
     ingredients: 'Água mineral 500ml',
@@ -114,6 +121,7 @@ export const mockMenuItems: MenuItem[] = [
   },
   {
     id: 'item-8',
+    restaurantId: 'rest-1',
     name: 'Brownie de Chocolate',
     description: 'Brownie artesanal de chocolate belga, crocante por fora e cremoso por dentro, servido quente com sorvete de creme e calda de chocolate.',
     ingredients: 'Chocolate belga, farinha, ovos, manteiga, açúcar, nozes e sorvete de creme',
@@ -130,6 +138,7 @@ export const mockMenuItems: MenuItem[] = [
   },
   {
     id: 'item-9',
+    restaurantId: 'rest-1',
     name: 'Petit Gateau',
     description: 'Bolinho de chocolate com recheio cremoso que derrete na boca, acompanhado de sorvete de creme e frutas vermelhas.',
     ingredients: 'Chocolate meio amargo, farinha, ovos, manteiga, açúcar, sorvete de creme e frutas vermelhas',
