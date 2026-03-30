@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { FavoritesProvider } from './contexts/FavoritesContext';
 import { ProtectedRoute } from './components/shared';
@@ -13,10 +13,11 @@ import Home from './pages/consumer/Home';
 import RestaurantPage from './pages/consumer/RestaurantPage';
 import Nearby from './pages/consumer/Nearby';
 import Favorites from './pages/consumer/Favorites';
-import Login from './pages/Login';
-import SignupChoice from './pages/SignupChoice';
-import SignupConsumer from './pages/SignupConsumer';
-import SignupRestaurant from './pages/SignupRestaurant';
+import Login from './pages/login/Login';
+import SignupChoice from './pages/signup/SignupChoice';
+import SignupConsumer from './pages/signup/SignupConsumer';
+import SignupRestaurant from './pages/signup/SignupRestaurant';
+import ForgotPassword from './pages/login/ForgotPassword';
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
           <Routes>
             {/* Login e Cadastro */}
             <Route path="/login" element={<Login />} />
+            <Route path="/recuperar-senha" element={<ForgotPassword />} />
             <Route path="/cadastro" element={<SignupChoice />} />
             <Route path="/cadastro/consumidor" element={<SignupConsumer />} />
             <Route path="/cadastro/restaurante" element={<SignupRestaurant />} />

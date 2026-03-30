@@ -24,13 +24,24 @@ export default function Sidebar() {
   };
 
   return (
-    <div 
-      className={`bg-dark text-secondary h-screen p-4 flex flex-col transition-all duration-300 sticky top-0 ${
-        isCollapsed ? 'w-20' : 'w-64'
-      }`}
-      onMouseEnter={() => setIsCollapsed(false)}
-      onMouseLeave={() => setIsCollapsed(true)}
-    >
+    <>
+      <style>{`
+        .sidebar-nav::-webkit-scrollbar {
+          display: none;
+        }
+        
+        .sidebar-nav {
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+      `}</style>
+      <div 
+        className={`bg-dark text-secondary h-screen p-4 flex flex-col transition-all duration-300 sticky top-0 ${
+          isCollapsed ? 'w-20' : 'w-64'
+        }`}
+        onMouseEnter={() => setIsCollapsed(false)}
+        onMouseLeave={() => setIsCollapsed(true)}
+      >
       {/* Logo */}
       <div className="mb-8 h-12 flex items-center justify-center">
         <div className={`transition-all duration-300 ${
@@ -46,7 +57,13 @@ export default function Sidebar() {
       </div>
 
       {/* Menu */}
-      <nav className="flex-1 overflow-y-auto">
+      <nav 
+        className="sidebar-nav flex-1 overflow-y-auto"
+        style={{
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+        }}
+      >
         <ul className="space-y-2">
           {filteredMenu.map(item => {
             const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
@@ -146,5 +163,6 @@ export default function Sidebar() {
         </button>
       </div>
     </div>
+  </>
   );
 }
