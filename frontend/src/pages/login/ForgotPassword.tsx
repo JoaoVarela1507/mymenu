@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Input, Button } from '../../components/shared';
+import { Input, Button, ImageCarousel } from '../../components/shared';
 import { findUserByEmail, sendPasswordResetEmail } from '../../lib/mockPasswordRecovery';
 import './Login.css';
 
@@ -43,18 +43,10 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div 
-      className="min-h-screen w-full relative overflow-hidden flex"
-      style={{
-        backgroundImage: 'url(/assets/imagem.png)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundAttachment: 'fixed'
-      }}
-    >
-      {/* Coluna esquerda - Imagem (55%) */}
-      <div className="hidden lg:block w-7/12 relative">
-        <div className="absolute inset-0 bg-black/20"></div>
+    <div className="min-h-screen w-full relative overflow-hidden flex">
+      {/* Coluna esquerda - Carrossel (55%) */}
+      <div className="hidden lg:flex lg:w-7/12 relative">
+        <ImageCarousel />
       </div>
 
       {/* Coluna direita - Formulário (45%) */}

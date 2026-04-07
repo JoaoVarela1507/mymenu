@@ -18,6 +18,7 @@ import SignupChoice from './pages/signup/SignupChoice';
 import SignupConsumer from './pages/signup/SignupConsumer';
 import SignupRestaurant from './pages/signup/SignupRestaurant';
 import ForgotPassword from './pages/login/ForgotPassword';
+import ResetPassword from './pages/login/ResetPassword';
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
             {/* Login e Cadastro */}
             <Route path="/login" element={<Login />} />
             <Route path="/recuperar-senha" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/cadastro" element={<SignupChoice />} />
             <Route path="/cadastro/consumidor" element={<SignupConsumer />} />
             <Route path="/cadastro/restaurante" element={<SignupRestaurant />} />
