@@ -7,14 +7,7 @@ interface OrderCardProps {
   onStatusChange: (orderId: string, newStatus: OrderStatus) => void;
 }
 
-const statusColors: Record<OrderStatus, string> = {
-  novo: '#C92924',
-  aceito: '#FF9800',
-  preparo: '#2196F3',
-  pronto: '#4CAF50',
-  finalizado: '#9E9E9E',
-  cancelado: '#F44336',
-};
+
 
 const sourceColors: Record<string, string> = {
   ifood: '#EA1D2C', // Vermelho iFood
@@ -144,3 +137,4 @@ export default function OrderCard({ order, onStatusChange }: OrderCardProps) {
     </Card>
   );
 }
+
