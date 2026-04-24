@@ -20,14 +20,16 @@ export interface MenuCategory {
   id: string;
   name: string;
   order: number;
+  restaurantId?: string; // Se undefined, é global; se definido, é específico do restaurante
 }
 
 export interface MenuItem {
   id: string;
+  restaurantId: string;
   name: string;
-  description: string;
+  description?: string;
   ingredients?: string;
-  image: string;
+  image?: string;
   categoryId: string;
   prices: {
     mymenu?: number;
@@ -38,6 +40,8 @@ export interface MenuItem {
   exclusive?: 'delivery' | 'presencial';
   available: boolean;
   allergens?: ('gluten' | 'dairy' | 'eggs' | 'nuts' | 'soy' | 'fish' | 'shellfish')[];
+  isOffer?: boolean;
+  offerPrice?: number;
 }
 
 export interface PriceComparison {
