@@ -1,4 +1,5 @@
-import { ReactNode, useRef, useEffect } from 'react';
+import type { ReactNode } from 'react';
+import { useRef, useEffect } from 'react';
 
 interface FilterButtonProps {
   activeFiltersCount: number;
@@ -6,7 +7,6 @@ interface FilterButtonProps {
   onToggle: () => void;
   onClearFilters: () => void;
   children: ReactNode;
-  variant?: 'default' | 'primary';
 }
 
 export default function FilterButton({ 
@@ -14,8 +14,7 @@ export default function FilterButton({
   showFilters, 
   onToggle, 
   onClearFilters,
-  children,
-  variant = 'default'
+  children
 }: FilterButtonProps) {
   const filtersRef = useRef<HTMLDivElement>(null);
 
@@ -30,15 +29,14 @@ export default function FilterButton({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showFilters, onToggle]);
 
-  const buttonStyles = variant === 'primary'
-    ? 'bg-primary text-secondary hover:bg-secondary hover:text-dark'
-    : 'bg-secondary text-dark hover:bg-secondary/80';
+  
 
   return (
     <div className="relative" ref={filtersRef}>
       <button
         onClick={onToggle}
-        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all h-[42px] ${buttonStyles}`}
+        className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all h-[42px] shadow-md text-white hover:opacity-90`}
+        style={{ backgroundColor: '#660000' }}
       >
         <span>🔍</span>
         <span>Filtros</span>
@@ -72,3 +70,5 @@ export default function FilterButton({
     </div>
   );
 }
+
+
