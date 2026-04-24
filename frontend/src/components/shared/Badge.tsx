@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 interface BadgeProps {
   children: ReactNode;
@@ -33,3 +33,4 @@ export default function Badge({
     </span>
   );
 }
+
