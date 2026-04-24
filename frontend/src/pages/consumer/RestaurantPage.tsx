@@ -93,7 +93,7 @@ export default function RestaurantPage() {
         <h2 className="text-2xl font-bold text-dark mb-6 text-center">📋 Cardápio</h2>
 
         {mockCategories.map(category => {
-          const items = mockMenuItems.filter(item => item.categoryId === category.id);
+          const items = mockMenuItems.filter(item => item.categoryId === category.id && item.restaurantId === restaurant.id);
           if (items.length === 0) return null;
 
           return (
