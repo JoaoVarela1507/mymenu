@@ -8,11 +8,15 @@ import OrdersCenter from './pages/admin/OrdersCenter';
 import Menu from './pages/admin/Menu';
 import Reports from './pages/admin/Reports';
 import Settings from './pages/admin/Settings';
-import Profile from './pages/admin/Profile';
+import AdminProfile from './pages/admin/Profile';
 import Home from './pages/consumer/Home';
 import RestaurantPage from './pages/consumer/RestaurantPage';
 import Nearby from './pages/consumer/Nearby';
 import Favorites from './pages/consumer/Favorites';
+import ConsumerProfile from './pages/consumer/Profile';
+import OrderHistory from './pages/consumer/OrderHistory';
+import TopRated from './pages/consumer/TopRated';
+import Offers from './pages/consumer/Offers';
 import Login from './pages/login/Login';
 import SignupChoice from './pages/signup/SignupChoice';
 import SignupConsumer from './pages/signup/SignupConsumer';
@@ -45,6 +49,10 @@ function App() {
               <Route path="restaurante/:slug" element={<RestaurantPage />} />
               <Route path="proximos" element={<Nearby />} />
               <Route path="favoritos" element={<Favorites />} />
+              <Route path="perfil" element={<ConsumerProfile />} />
+              <Route path="historico" element={<OrderHistory />} />
+              <Route path="top-avaliadas" element={<TopRated />} />
+              <Route path="ofertas" element={<Offers />} />
 
               {/* Admin */}
               <Route path="admin/dashboard" element={
@@ -79,7 +87,7 @@ function App() {
               } />
               <Route path="admin/profile" element={
                 <ProtectedRoute allowedTypes={['admin', 'staff']}>
-                  <Profile />
+                  <AdminProfile />
                 </ProtectedRoute>
               } />
             </Route>
