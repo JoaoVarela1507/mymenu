@@ -205,7 +205,7 @@ mymenu/
 O arquivo `.env` já vem pré-configurado com:
 
 ```
-MONGODB_URL=mongodb+srv://adm_db_user:VqNlVtPec0YfAbuW@cluster0.ena4zbx.mongodb.net/
+MONGODB_URL=mongodb+srv://user:token@cluster.mongo_url/
 JWT_SECRET_KEY=your-secret-key-change-this-in-production
 JWT_ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
