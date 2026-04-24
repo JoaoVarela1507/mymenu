@@ -1,6 +1,7 @@
 import { mockUsers } from '../lib/mockAuth';
 import { mockOrders } from '../lib/mockData';
 import { mockMenuItems } from '../lib/mockMenu';
+import type { OrderStatus } from '../types';
 
 // Types
 interface ApiResponse<T = any> {
@@ -28,19 +29,22 @@ interface RegisterRestaurantData {
   email: string;
   password: string;
   confirmPassword: string;
+  documentFile?: File;
 }
 
-interface LoginData {
-  email: string;
-  password: string;
-}
+
 
 interface MenuItemData {
   restaurantId: string;
   name: string;
   description?: string;
-  price: number;
-  category: string;
+  categoryId: string;
+  prices: {
+    mymenu: number;
+    ifood: number;
+    ubereats: number;
+    rappi: number;
+  };
   image?: string;
   available?: boolean;
 }
@@ -364,7 +368,7 @@ export const orderService = {
     };
   },
 
-  getConsumerOrders: async (consumerId: string, token: string): Promise<ApiResponse> => {
+  getConsumerOrders: async (token: string): Promise<ApiResponse> => {
     await delay();
     
     if (!token) {
@@ -380,7 +384,7 @@ export const orderService = {
     };
   },
 
-  getRestaurantOrders: async (restaurantId: string, token: string): Promise<ApiResponse> => {
+  getRestaurantOrders: async (token: string): Promise<ApiResponse> => {
     await delay();
     
     if (!token) {
@@ -438,7 +442,7 @@ export const orderService = {
       };
     }
 
-    order.status = status;
+    order.status = status as OrderStatus;
 
     return {
       success: true,
@@ -473,3 +477,4 @@ export const orderService = {
     };
   }
 };
+
