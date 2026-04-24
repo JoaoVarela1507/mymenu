@@ -6,7 +6,7 @@ export const mockUsers: AuthUser[] = [
     name: 'João Silva',
     email: 'admin@restaurante.com',
     type: 'admin',
-    restaurantId: '1',
+    restaurantId: '1', // Pizzaria Bella
   },
   {
     id: '2',
