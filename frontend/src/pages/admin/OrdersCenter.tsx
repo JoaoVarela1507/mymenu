@@ -99,7 +99,6 @@ export default function OrdersCenter() {
             showFilters={showFilters}
             onToggle={() => setShowFilters(!showFilters)}
             onClearFilters={clearFilters}
-            variant="primary"
           >
             {/* Status */}
             <div className="mb-3">
