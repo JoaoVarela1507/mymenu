@@ -10,6 +10,8 @@ export default function SignupRestaurant() {
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [category, setCategory] = useState('');
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [documentPreview, setDocumentPreview] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,12 +21,24 @@ export default function SignupRestaurant() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setDocumentFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setDocumentPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (!restaurantName || !cnpj || !phone || !address || !category || !name || !email || !password) {
-      setError('Preencha todos os campos');
+    if (!restaurantName || !cnpj || !phone || !address || !category || !name || !email || !password || !documentFile) {
+      setError('Preencha todos os campos obrigatórios');
       return;
     }
 
@@ -55,7 +69,8 @@ export default function SignupRestaurant() {
         name,
         email,
         password,
-        confirmPassword
+        confirmPassword,
+        documentFile: documentFile
       });
 
       if (response.success) {
@@ -184,6 +199,44 @@ export default function SignupRestaurant() {
                     className="px-3 py-1.5 text-sm"
                     required
                   />
+                </div>
+              </div>
+
+              {/* Upload de Documento */}
+              <div>
+                <h3 className="text-xs font-semibold text-[#6B4423] mb-3 tracking-wide">DOCUMENTAÇÃO OBRIGATÓRIA</h3>
+                <div className="space-y-1">
+                  <label className="block text-xs font-semibold text-[#6B4423] mb-2">
+                    Alvará ou Comprovante de Propriedade *
+                  </label>
+                  <div className="border-2 border-dashed border-[#C92924]/30 rounded-lg p-4 text-center bg-[#F5F5F5] cursor-pointer hover:bg-[#F0F0F0] transition-colors">
+                    <input
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                      onChange={handleDocumentChange}
+                      className="hidden"
+                      id="document-upload"
+                      required
+                    />
+                    <label htmlFor="document-upload" className="cursor-pointer block">
+                      {documentFile ? (
+                        <div className="space-y-2">
+                          <p className="text-xs font-semibold text-green-600">✓ Documento selecionado</p>
+                          <p className="text-xs text-[#6B4423]/60">{documentFile.name}</p>
+                          {documentPreview && (
+                            <div className="mt-2">
+                              <img src={documentPreview} alt="Preview" className="max-h-32 mx-auto rounded" />
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          <p className="text-xs font-semibold text-[#C92924]">📄 Clique para enviar</p>
+                          <p className="text-xs text-[#6B4423]/60">PDF, JPG, PNG ou DOC (máx 5MB)</p>
+                        </div>
+                      )}
+                    </label>
+                  </div>
                 </div>
               </div>
 
