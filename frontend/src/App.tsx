@@ -9,6 +9,7 @@ import Menu from './pages/admin/Menu';
 import Reports from './pages/admin/Reports';
 import Settings from './pages/admin/Settings';
 import AdminProfile from './pages/admin/Profile';
+import Plans from './pages/admin/Plans';
 import Home from './pages/consumer/Home';
 import RestaurantPage from './pages/consumer/RestaurantPage';
 import Nearby from './pages/consumer/Nearby';
@@ -88,6 +89,11 @@ function App() {
               <Route path="admin/profile" element={
                 <ProtectedRoute allowedTypes={['admin', 'staff']}>
                   <AdminProfile />
+                </ProtectedRoute>
+              } />
+              <Route path="admin/plans" element={
+                <ProtectedRoute allowedTypes={['admin']}>
+                  <Plans />
                 </ProtectedRoute>
               } />
             </Route>

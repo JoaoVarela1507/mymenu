@@ -81,6 +81,13 @@ export const menuItems: MenuItem[] = [
     allowedRoles: ['admin'],
   },
   {
+    id: 'plans',
+    label: 'Planos',
+    icon: '💳',
+    path: '/admin/plans',
+    allowedRoles: ['admin'],
+  },
+  {
     id: 'settings',
     label: 'Configurações',
     icon: '⚙️',
