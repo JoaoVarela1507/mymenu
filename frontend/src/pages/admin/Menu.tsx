@@ -4,6 +4,7 @@ import { Card, Button, Input } from '../../components/shared';
 import { useAuth } from '../../contexts/AuthContext';
 import { mockMenuItems, mockCategories } from '../../lib/mockMenu';
 import { mockRestaurants } from '../../lib/mockRestaurants';
+import { canAddProduct, getCurrentPlan, getPlanRule, planLimitLabel } from '../../lib/subscriptionPlan';
 
 export default function Menu() {
   const { user } = useAuth();
@@ -64,6 +65,8 @@ export default function Menu() {
   
   // Obter dados do restaurante
   const restaurant = mockRestaurants.find(r => r.id === user?.restaurantId);
+  const activePlan = getCurrentPlan();
+  const activeRule = getPlanRule(activePlan);
   
   // Filtrar itens do cardápio para este restaurante
   let filteredItems = menuItems.filter(
@@ -99,6 +102,13 @@ export default function Menu() {
     if (editingProduct) {
       updated = menuItems.map(item => item.id === product.id ? product : item);
     } else {
+      const currentCount = menuItems.filter(item => item.restaurantId === user?.restaurantId).length;
+      if (!canAddProduct(currentCount, activePlan)) {
+        alert(
+          `🚫 Limite de produtos do plano atingido.\n\nPlano atual: ${activeRule.label}\nLimite: ${planLimitLabel(activeRule.maxProducts)} produtos\n\nFaça upgrade em /admin/plans para liberar mais produtos.`
+        );
+        return;
+      }
       updated = [...menuItems, { ...product, id: `item_${Date.now()}`, restaurantId: user?.restaurantId || '' }];
     }
     
@@ -156,6 +166,17 @@ export default function Menu() {
       </div>
 
       <div className="max-w-7xl mx-auto px-8 py-12">
+        <Card className="mb-6 border border-gray-200 bg-white">
+          <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+            <p className="text-gray-700">
+              Plano atual: <span className="font-bold">{activeRule.icon} {activeRule.label}</span>
+            </p>
+            <p className="text-gray-700">
+              Limite de produtos: <span className="font-bold">{planLimitLabel(activeRule.maxProducts)}</span>
+            </p>
+          </div>
+        </Card>
+
         {/* Barra de Ações */}
         <div className="flex flex-col md:flex-row gap-4 mb-8">
           <Input
