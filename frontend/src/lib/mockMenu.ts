@@ -12,6 +12,7 @@ export const mockCategories: MenuCategory[] = [
   { id: 'pb-acompanhamentos', name: '🍟 Acompanhamentos', order: 7, restaurantId: '1' },
   
   // CATEGORIAS GENÉRICAS (para outros restaurantes)
+  { id: 'bh-ofertas', name: '🎁 Ofertas', order: 1, restaurantId: '2' },
   { id: 'cat-1', name: 'Pizzas', order: 1 },
   { id: 'cat-2', name: 'Bebidas', order: 2 },
   { id: 'cat-3', name: 'Sobremesas', order: 3 },
@@ -95,6 +96,8 @@ export const mockMenuItems: MenuItem[] = [
     },
     available: true,
     allergens: ['gluten', 'dairy'],
+    isOffer: true,
+    offerPrice: 31.50,
   },
   {
     id: 'item-5',
@@ -474,6 +477,43 @@ export const mockMenuItems: MenuItem[] = [
 
   // HAMBÚRGUERES E LANCHES
   {
+    id: 'item-13a',
+    restaurantId: '2',
+    name: 'Hamburger Premium',
+    description: 'Hambúrguer especial com carne suculenta, queijo derretido, bacon crocante e molho exclusivo da casa.',
+    ingredients: 'Carne bovina premium, queijo, bacon, pão artesanal, alface, tomate e molho especial',
+    image: '🍔',
+    categoryId: 'bh-ofertas',
+    prices: {
+      mymenu: 35.90,
+      ifood: 38.90,
+      ubereats: 37.90,
+      rappi: 38.50,
+    },
+    available: true,
+    allergens: ['gluten', 'dairy'],
+    isOffer: true,
+    offerPrice: 24.90,
+  },
+  {
+    id: 'item-13b',
+    restaurantId: '2',
+    name: 'Fritas Premium',
+    description: 'Batatas crocantes com tempero especial e maionese artesanal por tempo limitado.',
+    ingredients: 'Batata, óleo, sal marinho, tempero especial e maionese artesanal',
+    image: '🍟',
+    categoryId: 'bh-ofertas',
+    prices: {
+      mymenu: 18.90,
+      ifood: 20.90,
+      ubereats: 19.90,
+      rappi: 20.50,
+    },
+    available: true,
+    isOffer: true,
+    offerPrice: 12.90,
+  },
+  {
     id: 'item-14',
     restaurantId: '2',
     name: 'X-Burguer',
@@ -557,6 +597,8 @@ export const mockMenuItems: MenuItem[] = [
     },
     available: true,
     allergens: ['gluten', 'shellfish'],
+    isOffer: true,
+    offerPrice: 59.90,
   },
   {
     id: 'item-19',
@@ -626,6 +668,8 @@ export const mockMenuItems: MenuItem[] = [
     },
     available: true,
     allergens: ['gluten', 'dairy', 'eggs'],
+    isOffer: true,
+    offerPrice: 9.90,
   },
   {
     id: 'item-23',
@@ -695,6 +739,8 @@ export const mockMenuItems: MenuItem[] = [
       rappi: 14.00,
     },
     available: true,
+    isOffer: true,
+    offerPrice: 9.90,
   },
   {
     id: 'item-27',
