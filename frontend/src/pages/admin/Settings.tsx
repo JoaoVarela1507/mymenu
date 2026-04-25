@@ -1,17 +1,26 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { Card, Input, Button, PageHeader } from '../../components/shared';
 import { useAuth } from '../../contexts/AuthContext';
 import { mockRestaurants } from '../../lib/mockRestaurants';
+import type { RestaurantPlan } from '../../types/restaurant';
+import {
+  getCurrentPlan,
+  getPlanRule,
+  setCurrentPlan,
+  canAddRestaurant,
+  planLimitLabel,
+  type SubscriptionPlan,
+} from '../../lib/subscriptionPlan';
 
-const planLabels = {
+const planLabels: Record<RestaurantPlan, string> = {
   diamante: '💎 Diamante',
   ouro: '🥇 Ouro',
   prata: '🥈 Prata',
   basico: '🎯 Básico',
 };
 
-const planDescriptions = {
+const planDescriptions: Record<RestaurantPlan, string> = {
   diamante: 'Máxima prioridade na listagem + destaque no carrossel',
   ouro: 'Alta prioridade na listagem + destaque no carrossel',
   prata: 'Prioridade média na listagem',
@@ -41,6 +50,10 @@ export default function Settings() {
       localStorage.setItem('selectedRestaurantId', selectedRestaurantId);
     }
   }, [selectedRestaurantId, adminRestaurants]);
+
+  const selectedRestaurant = adminRestaurants.find(r => r.id === selectedRestaurantId);
+
+  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan>(getCurrentPlan());
 
   const [channels, setChannels] = useState({
     ifood: true,
@@ -74,7 +87,54 @@ export default function Settings() {
 
   if (!user || user.type !== 'admin') return null;
 
-  const restaurant = adminRestaurants.find(r => r.id === selectedRestaurantId);
+  const restaurant = selectedRestaurant;
+  const activePlan = getCurrentPlan();
+  const activeRule = getPlanRule(activePlan);
+
+  const planOptions: Array<{
+    id: SubscriptionPlan;
+    label: string;
+    shortLabel: string;
+    description: string;
+    badge: string;
+  }> = [
+    {
+      id: 'diamante',
+      label: 'Diamante',
+      shortLabel: 'Top',
+      description: 'Máxima prioridade, destaque e presença premium no app.',
+      badge: '💎',
+    },
+    {
+      id: 'ouro',
+      label: 'Ouro',
+      shortLabel: 'Destaque',
+      description: 'Alta prioridade na listagem com bom equilíbrio de custo e visibilidade.',
+      badge: '🥇',
+    },
+    {
+      id: 'prata',
+      label: 'Prata',
+      shortLabel: 'Base',
+      description: 'Prioridade intermediária para manter presença consistente.',
+      badge: '🥈',
+    },
+  ];
+
+  const handleSavePlan = () => {
+    setCurrentPlan(selectedPlan);
+    const rule = getPlanRule(selectedPlan);
+    alert(
+      `✅ Plano contratado atualizado para ${planLabels[selectedPlan]}!\n\nLimites atuais:\n- Restaurantes: ${planLimitLabel(rule.maxRestaurants)}\n- Produtos: ${planLimitLabel(rule.maxProducts)}`
+    );
+  };
+
+  const quickStats = [
+    { label: 'Avaliação', value: `⭐ ${restaurant?.rating || '-'}`, hint: 'Média dos clientes' },
+    { label: 'Distância', value: `${restaurant?.distance || '-'} km`, hint: 'Raio de entrega' },
+    { label: 'Entrega', value: restaurant?.deliveryTime || '-', hint: 'Tempo estimado' },
+    { label: 'Pedido mín.', value: `R$ ${restaurant?.minOrder?.toFixed(2) || '0,00'}`, hint: 'Valor mínimo' },
+  ];
 
   const handleSaveSettings = () => {
     if (editingRestaurantId) {
@@ -88,6 +148,13 @@ export default function Settings() {
   const handleCreateRestaurant = () => {
     if (!newRestaurant.name || !newRestaurant.category || !newRestaurant.proof) {
       alert('❌ Preencha todos os campos obrigatórios (Nome, Categoria, Comprovação)');
+      return;
+    }
+
+    if (!canAddRestaurant(adminRestaurants.length, activePlan)) {
+      alert(
+        `🚫 Limite do plano ${planLabels[activePlan]} atingido.\n\nVocê pode cadastrar até ${planLimitLabel(activeRule.maxRestaurants)} restaurante(s).\nFaça upgrade em /admin/plans para liberar mais.`
+      );
       return;
     }
     
@@ -178,21 +245,115 @@ export default function Settings() {
           {activeTab === 'geral' && (
             <>
               {restaurant && (
-                <Card>
-                  <h2 className="text-xl font-bold text-gray-800 mb-4">📊 Plano Atual</h2>
-                  <div className="p-4 rounded-lg" style={{ backgroundColor: '#fff3cd' }}>
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-2xl font-bold" style={{ color: '#660000' }}>
-                        {planLabels[restaurant.plan]}
-                      </span>
-                      <Button variant="outline" size="sm">Alterar Plano</Button>
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    {quickStats.map(stat => (
+                      <Card key={stat.label} className="bg-white border border-gray-200">
+                        <p className="text-xs uppercase tracking-wide text-gray-500 mb-2">{stat.label}</p>
+                        <p className="text-2xl font-bold text-gray-800">{stat.value}</p>
+                        <p className="text-xs text-gray-500 mt-2">{stat.hint}</p>
+                      </Card>
+                    ))}
+                  </div>
+
+                  <Card>
+                    <h2 className="text-xl font-bold text-gray-800 mb-4">📊 Plano Atual</h2>
+                    <div className="mb-5 p-4 rounded-lg border" style={{ backgroundColor: '#fff3cd', borderColor: '#f2d28f' }}>
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-3">
+                        <div>
+                          <span className="text-2xl font-bold" style={{ color: '#660000' }}>
+                            {planLabels[selectedPlan]}
+                          </span>
+                          <p className="text-sm text-gray-700 mt-1">{planDescriptions[selectedPlan]}</p>
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          <p><span className="font-semibold">Restaurante:</span> {restaurant.name}</p>
+                          <p><span className="font-semibold">Categoria:</span> {restaurant.category}</p>
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-sm text-gray-700">{planDescriptions[restaurant.plan]}</p>
+
+                    <div className="mb-5 rounded-xl border border-gray-200 bg-white p-4">
+                      <h3 className="text-sm font-bold text-gray-700 mb-3 uppercase tracking-wide">Limites do plano contratado</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                        <div className="rounded-lg bg-gray-50 p-3 border border-gray-200">
+                          <p className="text-gray-500">Restaurantes</p>
+                          <p className="text-lg font-bold text-gray-800">{planLimitLabel(getPlanRule(selectedPlan).maxRestaurants)}</p>
+                        </div>
+                        <div className="rounded-lg bg-gray-50 p-3 border border-gray-200">
+                          <p className="text-gray-500">Produtos</p>
+                          <p className="text-lg font-bold text-gray-800">{planLimitLabel(getPlanRule(selectedPlan).maxProducts)}</p>
+                        </div>
+                        <div className="rounded-lg bg-gray-50 p-3 border border-gray-200">
+                          <p className="text-gray-500">Relatórios avançados</p>
+                          <p className="text-lg font-bold text-gray-800">{getPlanRule(selectedPlan).advancedReports ? 'Liberado' : 'Bloqueado'}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <h3 className="text-sm font-bold text-gray-700 mb-3 uppercase tracking-wide">Editar plano</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {planOptions.map(option => {
+                        const isActive = selectedPlan === option.id;
+                        return (
+                          <button
+                            key={option.id}
+                            onClick={() => setSelectedPlan(option.id)}
+                            className={`text-left rounded-xl border-2 p-4 transition-all ${
+                              isActive ? 'border-[#660000] bg-red-50 shadow-md' : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-2xl">{option.badge}</span>
+                              <span className={`text-xs font-semibold px-2 py-1 rounded-full ${isActive ? 'bg-[#660000] text-white' : 'bg-gray-100 text-gray-600'}`}>
+                                {option.shortLabel}
+                              </span>
+                            </div>
+                            <p className="text-lg font-bold text-gray-800">{planLabels[option.id]}</p>
+                            <p className="text-sm text-gray-600 mt-2">{option.description}</p>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="flex items-center justify-between mt-5 gap-4 flex-wrap">
+                      <p className="text-xs text-gray-600">ℹ️ O plano altera prioridade, destaque e percepção do restaurante no app.</p>
+                      <Button onClick={handleSavePlan} className="bg-[#660000] hover:bg-[#550000] text-white px-6 py-2 rounded-lg font-semibold">
+                        💾 Salvar Plano
+                      </Button>
+                    </div>
+                  </Card>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Card>
+                      <h2 className="text-lg font-bold text-gray-800 mb-4">🏪 Resumo da Loja</h2>
+                      <div className="space-y-3 text-sm text-gray-700">
+                        <div className="flex justify-between gap-4"><span className="text-gray-500">Nome</span><span className="font-semibold text-right">{restaurant.name}</span></div>
+                        <div className="flex justify-between gap-4"><span className="text-gray-500">Categoria</span><span className="font-semibold text-right">{restaurant.category}</span></div>
+                        <div className="flex justify-between gap-4"><span className="text-gray-500">Plano atual</span><span className="font-semibold text-right">{planLabels[selectedPlan]}</span></div>
+                        <div className="flex justify-between gap-4"><span className="text-gray-500">Status</span><span className="font-semibold text-right" style={{ color: restaurant.isOpen ? '#22c55e' : '#ef4444' }}>{restaurant.isOpen ? 'Aberto' : 'Fechado'}</span></div>
+                      </div>
+                    </Card>
+
+                    <Card>
+                      <h2 className="text-lg font-bold text-gray-800 mb-4">⚡ Atalhos</h2>
+                      <div className="space-y-3">
+                        <Link to="/admin/menu" className="block rounded-lg border border-gray-200 px-4 py-3 hover:border-[#660000] hover:bg-red-50 transition-colors">
+                          <p className="font-semibold text-gray-800">Editar cardápio</p>
+                          <p className="text-sm text-gray-600">Atualize produtos e ofertas do restaurante.</p>
+                        </Link>
+                        <Link to="/admin/reports" className="block rounded-lg border border-gray-200 px-4 py-3 hover:border-[#660000] hover:bg-red-50 transition-colors">
+                          <p className="font-semibold text-gray-800">Ver relatórios</p>
+                          <p className="text-sm text-gray-600">Acompanhe vendas, ticket e desempenho.</p>
+                        </Link>
+                        <Link to="/admin/settings/integracoes" className="block rounded-lg border border-gray-200 px-4 py-3 hover:border-[#660000] hover:bg-red-50 transition-colors">
+                          <p className="font-semibold text-gray-800">Integrações</p>
+                          <p className="text-sm text-gray-600">Gerencie iFood, Uber Eats, Rappi e 99Food.</p>
+                        </Link>
+                      </div>
+                    </Card>
                   </div>
-                  <div className="mt-4 text-xs text-gray-600">
-                    <p>ℹ️ O plano define a prioridade do seu restaurante na listagem para os consumidores.</p>
-                  </div>
-                </Card>
+                </>
               )}
             </>
           )}
@@ -205,6 +366,9 @@ export default function Settings() {
                 <Card>
                   <h2 className="text-xl font-bold text-gray-800 mb-4">🏢 Meus Restaurantes</h2>
                   <p className="text-gray-600 mb-6">Você tem {adminRestaurants.length} restaurante(s) cadastrado(s)</p>
+                  <p className="text-xs text-gray-600 mb-4">
+                    Plano atual: <span className="font-semibold">{planLabels[activePlan]}</span> • Limite: <span className="font-semibold">{planLimitLabel(activeRule.maxRestaurants)}</span> restaurante(s)
+                  </p>
                   <Button
                     onClick={() => setShowNewRestaurantForm(true)}
                     className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold"

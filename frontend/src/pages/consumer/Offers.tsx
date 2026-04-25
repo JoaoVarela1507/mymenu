@@ -1,87 +1,31 @@
 import { Link } from 'react-router-dom';
 import { Card, PageHeader } from '../../components/shared';
+import { mockMenuItems } from '../../lib/mockMenu';
+import { mockRestaurants } from '../../lib/mockRestaurants';
 
 export default function Offers() {
-  const mockOffers = [
-    {
-      id: 'offer-1',
-      restaurant: 'Burger House',
-      restaurantLogo: '🍔',
-      restaurantSlug: 'burger-house',
-      dish: 'Hamburger Premium',
-      originalPrice: 35.90,
-      offerPrice: 24.90,
-      discount: '31%',
-      image: '🍔',
-      description: 'Pão artesanal, carnes selecionadas e molho especial',
-      validUntil: '30/04/2026'
-    },
-    {
-      id: 'offer-2',
-      restaurant: 'Pizzaria do Bairro',
-      restaurantLogo: '🍕',
-      restaurantSlug: 'pizzaria-do-bairro',
-      dish: 'Pizza Margarita',
-      originalPrice: 45.00,
-      offerPrice: 31.50,
-      discount: '30%',
-      image: '🍕',
-      description: 'Mussarela fresca, tomate e manjericão',
-      validUntil: '28/04/2026'
-    },
-    {
-      id: 'offer-3',
-      restaurant: 'Sushi Express',
-      restaurantLogo: '🍣',
-      restaurantSlug: 'sushi-express',
-      dish: 'Combo Sushi Mix',
-      originalPrice: 89.90,
-      offerPrice: 59.90,
-      discount: '33%',
-      image: '🍣',
-      description: '40 peças variadas - Ótimo para compartilhar',
-      validUntil: '25/04/2026'
-    },
-    {
-      id: 'offer-4',
-      restaurant: 'Restaurante Italiano',
-      restaurantLogo: '🍝',
-      restaurantSlug: 'restaurante-italiano',
-      dish: 'Pasta Carbonara',
-      originalPrice: 52.00,
-      offerPrice: 39.00,
-      discount: '25%',
-      image: '🍝',
-      description: 'Receita original italiana com ovos frescos',
-      validUntil: '29/04/2026'
-    },
-    {
-      id: 'offer-5',
-      restaurant: 'Burger House',
-      restaurantLogo: '🍔',
-      restaurantSlug: 'burger-house',
-      dish: 'Fritas Premium',
-      originalPrice: 18.90,
-      offerPrice: 12.90,
-      discount: '32%',
-      image: '🍟',
-      description: 'Batata cortada na hora com sal gourmet',
-      validUntil: '30/04/2026'
-    },
-    {
-      id: 'offer-6',
-      restaurant: 'Açaí & Companhia',
-      restaurantLogo: '🍓',
-      restaurantSlug: 'acai-e-companhia',
-      dish: 'Açaí Premium',
-      originalPrice: 32.00,
-      offerPrice: 22.40,
-      discount: '30%',
-      image: '🍓',
-      description: 'Açaí 100% natural com frutas vermelhas',
-      validUntil: '23/04/2026'
-    },
-  ];
+  const mockOffers = mockMenuItems
+    .filter(item => item.isOffer && item.offerPrice)
+    .map(item => {
+      const restaurant = mockRestaurants.find(r => r.id === item.restaurantId);
+      const originalPrice = Object.values(item.prices).find(price => typeof price === 'number') || 0;
+      const offerPrice = item.offerPrice || 0;
+      const discount = originalPrice > 0 ? `${Math.round(((originalPrice - offerPrice) / originalPrice) * 100)}%` : '0%';
+
+      return {
+        id: item.id,
+        restaurant: restaurant?.name || 'Restaurante',
+        restaurantLogo: restaurant?.logo || '🍽️',
+        restaurantSlug: restaurant?.slug || '#',
+        dish: item.name,
+        originalPrice,
+        offerPrice,
+        discount,
+        image: item.image || '🍽️',
+        description: item.description || '',
+        validUntil: '30/04/2026',
+      };
+    });
 
   const calculateSavings = (original: number, offer: number) => {
     return (original - offer).toFixed(2);
