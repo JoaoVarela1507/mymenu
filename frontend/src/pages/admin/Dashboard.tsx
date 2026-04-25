@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { Card } from '../../components/shared';
+import { Card, ImageCarousel } from '../../components/shared';
 import { useAuth } from '../../contexts/AuthContext';
 import { mockRestaurants } from '../../lib/mockRestaurants';
 
@@ -31,29 +31,80 @@ export default function Dashboard() {
 
   return (
     <div className="w-full min-h-screen" style={{ backgroundColor: '#f8f5ef' }}>
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 py-6 px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-3xl font-bold" style={{ color: '#660000' }}>
-              Visão Geral - {restaurant?.name || 'Seu Restaurante'}
-            </h1>
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-600">Mudar restaurante:</label>
-              <select
-                value={selectedRestaurantId}
-                onChange={(e) => setSelectedRestaurantId(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium bg-white cursor-pointer hover:border-gray-400"
-              >
-                {adminRestaurants.map(rest => (
-                  <option key={rest.id} value={rest.id}>
-                    {rest.logo} {rest.name}
-                  </option>
-                ))}
-              </select>
+      {/* Hero com carrossel */}
+      <div className="relative w-full h-[420px] overflow-hidden">
+        <ImageCarousel autoPlayInterval={4500} />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/35 to-black/75" />
+
+        <div className="absolute inset-0 flex flex-col justify-between z-10">
+          <div className="max-w-7xl mx-auto w-full px-8 pt-8">
+            <div className="flex items-center justify-between text-white">
+              <div>
+                <div className="flex items-center gap-4 mb-3">
+                  <img
+                    src="/assets/logo_2.png"
+                    alt="MyMenu"
+                    className="h-14 w-auto drop-shadow-lg"
+                  />
+                  <div className="h-10 w-px bg-white/30" />
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.25em] opacity-80 mb-1">Painel administrativo</p>
+                    <p className="text-sm md:text-base text-white/90 font-medium">
+                      Gerencie pedidos, cardápio e canais do restaurante ativo
+                    </p>
+                  </div>
+                </div>
+                <div className="inline-flex items-center gap-2 mt-2 bg-white/15 backdrop-blur-sm border border-white/20 rounded-full px-3 py-1.5 shadow-lg">
+                  <span className="text-[11px] uppercase tracking-[0.18em] text-white/70 font-semibold">Restaurante atual</span>
+                  <span className="text-base md:text-lg font-bold text-white drop-shadow-sm">
+                    {restaurant?.name || 'Seu Restaurante'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="hidden md:flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-2xl px-4 py-3 border border-white/20">
+                <span className="text-sm font-medium text-white/90">Mudar restaurante:</span>
+                <select
+                  value={selectedRestaurantId}
+                  onChange={(e) => setSelectedRestaurantId(e.target.value)}
+                  className="px-3 py-2 rounded-lg text-sm font-medium bg-white cursor-pointer hover:border-gray-400 text-gray-800"
+                >
+                  {adminRestaurants.map(rest => (
+                    <option key={rest.id} value={rest.id}>
+                      {rest.logo} {rest.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
-          <p className="text-gray-600">Bem-vindo, {user?.name}! Aqui está um resumo do seu negócio.</p>
+
+          <div className="max-w-7xl mx-auto w-full px-8 pb-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-white">
+              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-3.5 border border-white/15">
+                <p className="text-xs uppercase tracking-wide text-white/70 mb-1">Restaurante ativo</p>
+                <p className="text-base font-bold">{restaurant?.name}</p>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-3.5 border border-white/15">
+                <p className="text-xs uppercase tracking-wide text-white/70 mb-1">Plano</p>
+                <p className="text-base font-bold capitalize">{restaurant?.plan}</p>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-3.5 border border-white/15 md:hidden">
+                <label className="block text-xs uppercase tracking-wide text-white/70 mb-2">Mudar restaurante</label>
+                <select
+                  value={selectedRestaurantId}
+                  onChange={(e) => setSelectedRestaurantId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg text-sm font-medium bg-white cursor-pointer text-gray-800"
+                >
+                  {adminRestaurants.map(rest => (
+                    <option key={rest.id} value={rest.id}>
+                      {rest.logo} {rest.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
