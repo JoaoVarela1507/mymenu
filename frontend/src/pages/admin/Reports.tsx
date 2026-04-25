@@ -1,6 +1,50 @@
 import { Card, PageHeader } from '../../components/shared';
+import { Link } from 'react-router-dom';
+import { getCurrentPlan, getPlanRule } from '../../lib/subscriptionPlan';
 
 export default function Reports() {
+  const activePlan = getCurrentPlan();
+  const activeRule = getPlanRule(activePlan);
+
+  if (!activeRule.advancedReports) {
+    return (
+      <div className="min-h-screen" style={{ backgroundColor: '#f8f5ef' }}>
+        <PageHeader
+          title="Relatórios"
+          subtitle="Análises detalhadas de vendas e performance"
+          icon="📊"
+        />
+
+        <div className="max-w-4xl mx-auto px-8 py-12">
+          <Card className="border-2 border-yellow-300 bg-yellow-50">
+            <h2 className="text-2xl font-bold text-gray-800 mb-3">🔒 Relatórios avançados indisponíveis</h2>
+            <p className="text-gray-700 mb-4">
+              Seu plano atual é <span className="font-semibold">{activeRule.icon} {activeRule.label}</span>.
+              Para liberar relatórios completos, faça upgrade para <span className="font-semibold">Ouro</span> ou <span className="font-semibold">Diamante</span>.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+              <div className="rounded-lg border border-yellow-200 bg-white p-4">
+                <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">Recurso atual</p>
+                <p className="text-lg font-bold text-gray-800">Painel básico</p>
+              </div>
+              <div className="rounded-lg border border-yellow-200 bg-white p-4">
+                <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">Upgrade recomendado</p>
+                <p className="text-lg font-bold text-gray-800">Plano Ouro</p>
+              </div>
+            </div>
+            <Link
+              to="/admin/plans"
+              className="inline-flex items-center px-5 py-2 rounded-lg font-semibold text-white"
+              style={{ backgroundColor: '#660000' }}
+            >
+              Ver planos de assinatura
+            </Link>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   // Mock data para gráficos
   const monthlySalesData = [
     { month: 'Jan', sales: 4200, orders: 24 },
