@@ -3,38 +3,61 @@ import type { MenuItem } from '../types/user';
 export const menuItems: MenuItem[] = [
   {
     id: 'home',
-    label: 'Restaurantes',
-    icon: '🍽️',
+    label: 'Início',
+    icon: '🏠',
     path: '/',
-    allowedRoles: ['staff', 'admin', 'consumer'],
-  },
-  {
-    id: 'nearby',
-    label: 'Próximos',
-    icon: '📍',
-    path: '/proximos',
-    allowedRoles: ['consumer', 'admin'],
+    allowedRoles: ['consumer'],
   },
   {
     id: 'favorites',
     label: 'Favoritos',
     icon: '❤️',
     path: '/favoritos',
-    allowedRoles: ['consumer', 'admin'],
+    allowedRoles: ['consumer'],
   },
   {
+    id: 'offers',
+    label: 'Ofertas',
+    icon: '🎁',
+    path: '/ofertas',
+    allowedRoles: ['consumer'],
+  },
+  {
+    id: 'history',
+    label: 'Histórico',
+    icon: '⏱️',
+    path: '/historico',
+    allowedRoles: ['consumer'],
+  },
+  {
+    id: 'ratings',
+    label: 'Top Avaliações',
+    icon: '⭐',
+    path: '/top-avaliadas',
+    allowedRoles: ['consumer'],
+  },
+  {
+    id: 'profile',
+    label: 'Meu Perfil',
+    icon: '👤',
+    path: '/perfil',
+    allowedRoles: ['consumer'],
+  },
+  // SEPARADOR VISUAL
+  {
+    id: 'separator',
+    label: '—',
+    icon: '—',
+    path: '#',
+    allowedRoles: [],
+  },
+  // ADMIN MENU
+  {
     id: 'dashboard',
-    label: 'Dashboard',
+    label: 'Visão Geral',
     icon: '📊',
     path: '/admin/dashboard',
     allowedRoles: ['admin'],
-  },
-  {
-    id: 'orders',
-    label: 'Pedidos',
-    icon: '📦',
-    path: '/admin/orders',
-    allowedRoles: ['staff', 'admin'],
   },
   {
     id: 'menu',
@@ -44,10 +67,24 @@ export const menuItems: MenuItem[] = [
     allowedRoles: ['admin'],
   },
   {
+    id: 'orders',
+    label: 'Pedidos',
+    icon: '📦',
+    path: '/admin/orders',
+    allowedRoles: ['admin', 'staff'],
+  },
+  {
     id: 'reports',
     label: 'Relatórios',
     icon: '📈',
     path: '/admin/reports',
+    allowedRoles: ['admin'],
+  },
+  {
+    id: 'plans',
+    label: 'Planos',
+    icon: '💳',
+    path: '/admin/plans',
     allowedRoles: ['admin'],
   },
   {
@@ -61,5 +98,12 @@ export const menuItems: MenuItem[] = [
       { id: 'settings-equipe', label: 'Equipe', path: '/admin/settings/equipe' },
       { id: 'settings-integracoes', label: 'Integrações', path: '/admin/settings/integracoes' },
     ],
+  },
+  {
+    id: 'admin-profile',
+    label: 'Perfil',
+    icon: '👤',
+    path: '/admin/profile',
+    allowedRoles: ['admin', 'staff'],
   },
 ];

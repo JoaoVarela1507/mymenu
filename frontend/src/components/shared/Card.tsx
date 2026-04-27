@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import type { ReactNode, CSSProperties } from 'react';
 
 interface CardProps {
   children: ReactNode;
@@ -6,6 +6,7 @@ interface CardProps {
   statusColor?: string;
   className?: string;
   onClick?: () => void;
+  style?: CSSProperties;
 }
 
 export default function Card({ 
@@ -13,7 +14,8 @@ export default function Card({
   variant = 'default', 
   statusColor,
   className = '',
-  onClick
+  onClick,
+  style
 }: CardProps) {
   const baseStyles = 'rounded-xl p-5 shadow-sm';
   
@@ -29,10 +31,11 @@ export default function Card({
   return (
     <div 
       className={`${baseStyles} ${variants[variant]} ${className}`}
-      style={borderStyle}
+      style={{ ...borderStyle, ...style }}
       onClick={onClick}
     >
       {children}
     </div>
   );
 }
+
