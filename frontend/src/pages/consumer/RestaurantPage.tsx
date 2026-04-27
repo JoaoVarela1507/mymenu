@@ -93,7 +93,7 @@ export default function RestaurantPage() {
         <h2 className="text-2xl font-bold text-dark mb-6 text-center">📋 Cardápio</h2>
 
         {mockCategories.map(category => {
-          const items = mockMenuItems.filter(item => item.categoryId === category.id);
+          const items = mockMenuItems.filter(item => item.categoryId === category.id && item.restaurantId === restaurant.id);
           if (items.length === 0) return null;
 
           return (
@@ -104,6 +104,8 @@ export default function RestaurantPage() {
                 {items.map(item => {
                   const isExpanded = expandedItem === item.id;
                   const cheapestPrice = Math.min(...Object.values(item.prices).filter(p => p !== undefined) as number[]);
+                  const displayPrice = item.isOffer && item.offerPrice ? item.offerPrice : cheapestPrice;
+                  const originalPrice = item.isOffer && item.offerPrice ? cheapestPrice : null;
                   const itemRef = useRef<HTMLDivElement>(null);
 
                   useEffect(() => {
@@ -115,13 +117,20 @@ export default function RestaurantPage() {
                   }, [isExpanded]);
                   
                   return (
-                    <div key={item.id} ref={itemRef} className="bg-white rounded-xl border border-dark/10 overflow-hidden hover:shadow-lg transition-all duration-300">
+                    <div key={item.id} ref={itemRef} className={`bg-white rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300 ${item.isOffer ? 'border-2 border-yellow-300 shadow-md' : 'border border-dark/10'}`}>
                       {/* Item Principal */}
-                      <div className="p-4 flex items-start gap-3 bg-gradient-to-r from-white to-secondary/10">
+                      <div className={`p-4 flex items-start gap-3 ${item.isOffer ? 'bg-gradient-to-r from-yellow-50 to-orange-50' : 'bg-gradient-to-r from-white to-secondary/10'}`}>
                         <div className="text-7xl flex-shrink-0 drop-shadow-md">{item.image}</div>
                         
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-xl font-bold text-dark mb-2">{item.name}</h4>
+                          <div className="flex items-start justify-between gap-3 mb-2">
+                            <h4 className="text-xl font-bold text-dark">{item.name}</h4>
+                            {item.isOffer && (
+                              <span className="px-3 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-800 border border-yellow-300 whitespace-nowrap">
+                                🎁 Em Oferta
+                              </span>
+                            )}
+                          </div>
                           <p className="text-sm text-dark/70 mb-3 leading-relaxed">{item.description}</p>
                           
                           <div className="flex gap-2 flex-wrap">
@@ -139,10 +148,22 @@ export default function RestaurantPage() {
 
                         <div className="flex flex-col items-end gap-3">
                           <div className="text-right">
-                            <div className="text-xs text-dark/50 mb-1">a partir de</div>
-                            <span className="text-3xl font-bold text-primary drop-shadow-sm">
-                              R$ {cheapestPrice.toFixed(2)}
-                            </span>
+                            {item.isOffer && originalPrice ? (
+                              <>
+                                <div className="text-xs text-dark/50 mb-1">Oferta especial</div>
+                                <p className="text-sm line-through text-gray-500">R$ {originalPrice.toFixed(2)}</p>
+                                <span className="text-3xl font-bold text-primary drop-shadow-sm">
+                                  R$ {displayPrice.toFixed(2)}
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <div className="text-xs text-dark/50 mb-1">a partir de</div>
+                                <span className="text-3xl font-bold text-primary drop-shadow-sm">
+                                  R$ {displayPrice.toFixed(2)}
+                                </span>
+                              </>
+                            )}
                           </div>
                           <button
                             onClick={() => setExpandedItem(isExpanded ? null : item.id)}
@@ -226,6 +247,11 @@ export default function RestaurantPage() {
                           <div className="px-5 py-4 bg-gradient-to-br from-white to-secondary/5">
                             <h5 className="font-bold text-dark mb-4 text-base flex items-center gap-2">
                               <span className="text-xl">💰</span> Compare os Preços:
+                              {item.isOffer && (
+                                <span className="px-2 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-800 border border-yellow-300">
+                                  🎁 Este prato está em oferta
+                                </span>
+                              )}
                             </h5>
                             <div className="grid grid-cols-2 gap-3">
                               {item.prices.mymenu && (

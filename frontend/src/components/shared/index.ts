@@ -6,3 +6,5 @@ export { default as ProtectedRoute } from './ProtectedRoute';
 export { default as PageHeader } from './PageHeader';
 export { default as EmptyState } from './EmptyState';
 export { default as FilterButton } from './FilterButton';
+export { default as ImageCarousel } from './ImageCarousel';
+export { default as Sidebar } from './Sidebar';

@@ -1,10 +1,34 @@
 import { Card, Input, Button, PageHeader } from '../../components/shared';
 import { useAuth } from '../../contexts/AuthContext';
+import { mockRestaurants } from '../../lib/mockRestaurants';
+import { useState, useEffect } from 'react';
 
 export default function Profile() {
   const { user } = useAuth();
+  
+  // Restaurantes cadastrados do admin (apenas 3 do mock)
+  const adminRestaurants = mockRestaurants.slice(0, 3);
+  
+  // Carregar do localStorage ao montar, senão usar o primeiro restaurante do admin
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState(() => {
+    const saved = localStorage.getItem('selectedRestaurantId');
+    if (saved && adminRestaurants.find(r => r.id === saved)) {
+      return saved;
+    }
+    return adminRestaurants[0]?.id || user?.restaurantId;
+  });
+
+  // Salvar no localStorage sempre que muda
+  useEffect(() => {
+    if (selectedRestaurantId) {
+      localStorage.setItem('selectedRestaurantId', selectedRestaurantId);
+    }
+  }, [selectedRestaurantId, adminRestaurants]);
 
   if (!user) return null;
+
+  const selectedRestaurant = adminRestaurants.find(r => r.id === selectedRestaurantId);
+
   return (
     <div className="min-h-screen bg-white">
       <PageHeader 
@@ -34,6 +58,27 @@ export default function Profile() {
             <Input label="Nome Completo" defaultValue={user.name} />
             <Input label="Email" type="email" defaultValue={user.email} />
             <Input label="Telefone" placeholder="(11) 99999-9999" />
+            
+            {/* Seletor de Restaurante */}
+            <div>
+              <label className="block text-sm font-semibold text-dark mb-2">Restaurante Gerenciado</label>
+              <select
+                value={selectedRestaurantId}
+                onChange={(e) => setSelectedRestaurantId(e.target.value)}
+                className="w-full px-3 py-2 border border-dark/20 rounded-lg text-sm font-medium bg-white cursor-pointer hover:border-dark/40"
+              >
+                {adminRestaurants.map(rest => (
+                  <option key={rest.id} value={rest.id}>
+                    {rest.logo} {rest.name}
+                  </option>
+                ))}
+              </select>
+              {selectedRestaurant && (
+                <p className="text-xs text-dark/60 mt-2">
+                  Categoria: {selectedRestaurant.category} • Avaliação: ⭐ {selectedRestaurant.rating}
+                </p>
+              )}
+            </div>
             
             <div className="pt-4">
               <Button variant="primary">Salvar Alterações</Button>

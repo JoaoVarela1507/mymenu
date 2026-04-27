@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, type ReactNode } from 'react';
 import type { AuthUser, LoginCredentials } from '../types/auth';
 import { mockLogin } from '../lib/mockAuth';
 
@@ -53,3 +53,4 @@ export function useAuth() {
   }
   return context;
 }
+
