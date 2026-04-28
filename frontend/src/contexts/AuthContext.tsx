@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
 import type { AuthUser, LoginCredentials } from '../types/auth';
-import { mockLogin } from '../lib/mockAuth';
+import { authService } from '../services/api';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -13,25 +13,26 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(() => {
-    const stored = localStorage.getItem('mymenu_user');
-    return stored ? JSON.parse(stored) : null;
+    return authService.getUser();
   });
 
   const login = async (credentials: LoginCredentials): Promise<boolean> => {
-    const authenticatedUser = mockLogin(credentials.email, credentials.password);
-    
-    if (authenticatedUser) {
-      setUser(authenticatedUser);
-      localStorage.setItem('mymenu_user', JSON.stringify(authenticatedUser));
-      return true;
+    try {
+      const response = await authService.login(credentials.email, credentials.password);
+      if (response.success && response.user) {
+        setUser(response.user);
+        return true;
+      }
+    } catch {
+      return false;
     }
-    
+
     return false;
   };
 
   const logout = () => {
+    authService.logout();
     setUser(null);
-    localStorage.removeItem('mymenu_user');
   };
 
   return (
@@ -53,4 +54,3 @@ export function useAuth() {
   }
   return context;
 }
-
