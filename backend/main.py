@@ -1,8 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+
 from app.core.database import db
 from app.routes.auth import router as auth_router
+from app.routes.menu import router as menu_router
 from app.core.config import settings
+from app.core.files import UPLOADS_DIR
 
 # Create FastAPI app
 app = FastAPI(
@@ -11,13 +15,22 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Configure CORS
+# Configure CORS - Must be added FIRST before other middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],  # React dev servers
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
+    ],
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=600,
 )
 
 # Startup event
@@ -34,6 +47,10 @@ async def shutdown_event():
 
 # Include routers
 app.include_router(auth_router)
+app.include_router(menu_router)
+
+UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 
 # Root endpoint
 @app.get("/")
@@ -55,7 +72,7 @@ async def health_check():
     """Health check endpoint"""
     return {
         "status": "healthy",
-        "database": "connected" if db.db else "disconnected"
+        "database": "connected" if db.db is not None else "disconnected"
     }
 
 if __name__ == "__main__":
