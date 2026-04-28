@@ -1,9 +1,10 @@
-from pydantic_settings import BaseSettings
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
 
 class Settings(BaseSettings):
     mongodb_url: str = "mongodb+srv://adm_db_user:VqNlVtPec0YfAbuW@cluster0.ena4zbx.mongodb.net/?appName=Cluster0"
-    database_name: str = "mymenu"
+    database_name: str = Field("mymenu", env=["MONGODB_DB_NAME", "DATABASE_NAME"])
     jwt_secret_key: str = "mymenu1234"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
@@ -16,7 +17,9 @@ class Settings(BaseSettings):
     gmail_address: str = "mylena08@gmail.com"
     gmail_app_password: str = "jhmbocfbjmwnvlaz"
 
-    class Config:
-        env_file = ".env"
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        extra="ignore"
+    )
 
 settings = Settings()
