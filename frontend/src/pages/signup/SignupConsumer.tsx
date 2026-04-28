@@ -25,8 +25,8 @@ export default function SignupConsumer() {
       return;
     }
 
-    if (password.length < 6) {
-      setError('Senha deve ter no mínimo 6 caracteres');
+    if (password.length < 8) {
+      setError('Senha deve ter no mínimo 8 caracteres');
       setLoading(false);
       return;
     }
@@ -36,7 +36,7 @@ export default function SignupConsumer() {
         name,
         email,
         password,
-        confirmPassword
+        confirmPassword,
       });
 
       if (response.success) {
@@ -45,7 +45,7 @@ export default function SignupConsumer() {
         setError(response.message || 'Erro ao criar conta. Tente outro email.');
       }
     } catch (err) {
-      setError('Erro ao conectar ao servidor. Verifique sua conexão.');
+      setError(err instanceof Error ? err.message : 'Erro ao conectar ao servidor. Verifique sua conexão.');
     } finally {
       setLoading(false);
     }
@@ -58,12 +58,9 @@ export default function SignupConsumer() {
       </div>
 
       <div className="w-full lg:w-5/12 flex items-center justify-center p-6 bg-gradient-to-b from-gray-50 to-gray-100 overflow-y-auto relative z-10">
-        {/* Card com Glassmorfismo */}
         <div className="glass-card-golden w-full max-w-lg shadow-2xl p-0 overflow-hidden flex flex-col">
-          
-          {/* FAIXA VERMELHA */}
-          <div 
-            className="bg-[#A30000] flex-shrink-0 flex items-center border-b-4 border-[#8B0000] relative" 
+          <div
+            className="bg-[#A30000] flex-shrink-0 flex items-center border-b-4 border-[#8B0000] relative"
             style={{
               marginLeft: '-50px',
               marginRight: '-50px',
@@ -77,7 +74,6 @@ export default function SignupConsumer() {
               position: 'relative'
             }}
           >
-            {/* Botão Voltar */}
             <button
               onClick={() => navigate(-1)}
               className="text-white hover:opacity-80 transition-opacity font-bold"
@@ -98,99 +94,97 @@ export default function SignupConsumer() {
               <img src="/assets/voltar.png" alt="Voltar" style={{ width: '32px', height: '32px' }} />
             </button>
 
-            {/* Título centralizado */}
             <h2 className="absolute text-white left-1/2 -translate-x-1/2 m-0 font-bold text-xl" style={{ color: '#FFFFFF' }}>
               Cadastro
             </h2>
           </div>
 
-          {/* CONTEÚDO */}
           <div className="flex-1 flex flex-col items-center justify-center px-6 py-8 overflow-y-auto">
             <div className="w-full max-w-sm">
-            <div className="text-left mb-6">
-              <h2 className="text-lg font-bold text-[#6B4423] m-0">Consumidor</h2>
-              <p className="text-xs text-[#C92924]/70 m-0 whitespace-nowrap">Complete seus dados para criar a conta</p>
-            </div>
+              <div className="text-left mb-6">
+                <h2 className="text-lg font-bold text-[#6B4423] m-0">Consumidor</h2>
+                <p className="text-xs text-[#C92924]/70 m-0 whitespace-nowrap">Complete seus dados para criar a conta</p>
+              </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <Input
-                label="Nome Completo"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Seu nome"
-                className="px-3 py-1.5 text-sm"
-                required
-              />
-
-              <Input
-                label="Email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="seu@email.com"
-                className="px-3 py-1.5 text-sm"
-                required
-              />
-
-              <Input
-                label="Senha"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Crie uma senha"
-                className="px-3 py-1.5 text-sm"
-                required
-              />
-
-              <Input
-                label="Confirmar Senha"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirme sua senha"
-                className="px-3 py-1.5 text-sm"
-                required
-              />
-
-              <label className="checkbox-terms cursor-pointer py-2">
-                <input
-                  type="checkbox"
-                  id="terms"
-                  checked={agreeTerms}
-                  onChange={(e) => setAgreeTerms(e.target.checked)}
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <Input
+                  label="Nome Completo"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Seu nome"
+                  className="px-3 py-1.5 text-sm"
+                  required
                 />
-                <span className="text-xs text-[#6B4423]">
-                  Concordo com os <span className="text-[#C92924] font-semibold">Termos de Serviço</span>
-                </span>
-              </label>
 
-              {error && (
-                <div className="bg-red-100/80 border border-red-300 rounded-lg p-2">
-                  <p className="text-red-700 text-xs font-medium">{error}</p>
-                </div>
-              )}
+                <Input
+                  label="Email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="seu@email.com"
+                  className="px-3 py-1.5 text-sm"
+                  required
+                />
 
-              <Button
-                type="submit"
-                variant="primary"
-                className="w-full py-2 font-bold text-sm button-depth rounded-full bg-[#C92924] hover:bg-[#A02219]"
-                disabled={!agreeTerms || loading}
-              >
-                {loading ? 'Criando conta...' : 'Acessar conta'}
-              </Button>
-            </form>
+                <Input
+                  label="Senha"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Crie uma senha"
+                  className="px-3 py-1.5 text-sm"
+                  required
+                />
 
-            <div className="text-center pt-4 border-t border-[#D4AF37]/30 mt-4">
-              <p className="text-[#C92924]/70 text-xs mb-2">Já tem uma conta?</p>
-              <Link 
-                to="/login" 
-                className="inline-block w-full border-2 border-gray-300 font-bold text-xs py-1.5 px-4 rounded-lg text-[#C92924] hover:border-[#D4AF37] transition-colors"
-                style={{ backgroundColor: '#FFF8E7' }}
-              >
-                Fazer login
-              </Link>
-            </div>
+                <Input
+                  label="Confirmar Senha"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirme sua senha"
+                  className="px-3 py-1.5 text-sm"
+                  required
+                />
+
+                <label className="checkbox-terms cursor-pointer py-2">
+                  <input
+                    type="checkbox"
+                    id="terms"
+                    checked={agreeTerms}
+                    onChange={(e) => setAgreeTerms(e.target.checked)}
+                  />
+                  <span className="text-xs text-[#6B4423]">
+                    Concordo com os <span className="text-[#C92924] font-semibold">Termos de Serviço</span>
+                  </span>
+                </label>
+
+                {error && (
+                  <div className="bg-red-100/80 border border-red-300 rounded-lg p-2">
+                    <p className="text-red-700 text-xs font-medium">{error}</p>
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  variant="primary"
+                  className="w-full py-2 font-bold text-sm button-depth rounded-full bg-[#C92924] hover:bg-[#A02219]"
+                  disabled={!agreeTerms || loading}
+                >
+                  {loading ? 'Criando conta...' : 'Acessar conta'}
+                </Button>
+              </form>
+
+              <div className="text-center pt-4 border-t border-[#D4AF37]/30 mt-4">
+                <p className="text-[#C92924]/70 text-xs mb-2">Já tem uma conta?</p>
+                <Link
+                  to="/login"
+                  className="inline-block w-full border-2 border-gray-300 font-bold text-xs py-1.5 px-4 rounded-lg text-[#C92924] hover:border-[#D4AF37] transition-colors"
+                  style={{ backgroundColor: '#FFF8E7' }}
+                >
+                  Fazer login
+                </Link>
+              </div>
             </div>
           </div>
         </div>
