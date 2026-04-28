@@ -1,10 +1,21 @@
-import { useState, useEffect } from 'react';
-import type { MenuItem, MenuCategory } from '../../types/restaurant';
+import { useEffect, useMemo, useState } from 'react';
+import type { MenuCategory, MenuItem } from '../../types/restaurant';
 import { Card, Button, Input } from '../../components/shared';
 import { useAuth } from '../../contexts/AuthContext';
-import { mockMenuItems, mockCategories } from '../../lib/mockMenu';
 import { mockRestaurants } from '../../lib/mockRestaurants';
 import { canAddProduct, getCurrentPlan, getPlanRule, planLimitLabel } from '../../lib/subscriptionPlan';
+import { authService, menuService, type MenuItemPayload } from '../../services/api';
+
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+interface FeedbackState {
+  type: 'success' | 'error';
+  message: string;
+}
+
+interface ProductFormValues extends MenuItemPayload {}
+
 
 export default function Menu() {
   const { user } = useAuth();
@@ -14,154 +25,245 @@ export default function Menu() {
   const [categories, setCategories] = useState<MenuCategory[]>([]);
   const [editingProduct, setEditingProduct] = useState<MenuItem | null>(null);
   const [isAddingProduct, setIsAddingProduct] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<MenuItem | null>(null);
   const [editingCategory, setEditingCategory] = useState<MenuCategory | null>(null);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [feedback, setFeedback] = useState<FeedbackState | null>(null);
 
-  // Carregar dados do localStorage ou usar mock data
-  useEffect(() => {
-    const menuStorageKey = `menu_items_${user?.restaurantId}`;
-    const categoryStorageKey = `menu_categories_${user?.restaurantId}`;
-    
-    // Carregar itens
-    const storedItems = localStorage.getItem(menuStorageKey);
-    if (storedItems) {
-      setMenuItems(JSON.parse(storedItems));
-    } else {
-      const restaurantItems = mockMenuItems.filter(
-        item => item.restaurantId === user?.restaurantId
-      );
-      setMenuItems(restaurantItems);
-    }
-    
-    // Carregar categorias
-    const storedCategories = localStorage.getItem(categoryStorageKey);
-    if (storedCategories) {
-      setCategories(JSON.parse(storedCategories));
-    } else {
-      const restaurantCategories = mockCategories.filter(
-        cat => cat.restaurantId === user?.restaurantId
-      );
-      setCategories(restaurantCategories);
-    }
-  }, [user?.restaurantId]);
-
-  // Salvar produtos no localStorage
-  const saveMenuToLocalStorage = (items: MenuItem[]) => {
-    if (user?.restaurantId) {
-      const storageKey = `menu_items_${user.restaurantId}`;
-      localStorage.setItem(storageKey, JSON.stringify(items));
-    }
-  };
-
-  // Salvar categorias no localStorage
-  const saveCategoriesToLocalStorage = (cats: MenuCategory[]) => {
-    if (user?.restaurantId) {
-      const storageKey = `menu_categories_${user.restaurantId}`;
-      localStorage.setItem(storageKey, JSON.stringify(cats));
-    }
-  };
-  
-  // Obter dados do restaurante
   const restaurant = mockRestaurants.find(r => r.id === user?.restaurantId);
   const activePlan = getCurrentPlan();
   const activeRule = getPlanRule(activePlan);
-  
-  // Filtrar itens do cardápio para este restaurante
-  let filteredItems = menuItems.filter(
-    item => item.restaurantId === user?.restaurantId
-  );
-  
-  // Filtrar por categoria se selecionada
-  if (selectedCategory) {
-    filteredItems = filteredItems.filter(item => item.categoryId === selectedCategory);
-  }
-  
-  // Filtrar por busca
-  if (searchTerm) {
-    filteredItems = filteredItems.filter(item =>
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.description?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }
-  
-  // Agrupar itens por categoria
-  const itemsByCategory = categories
-    .map(category => ({
-      category,
-      items: filteredItems.filter(item => item.categoryId === category.id)
-    }))
-    .filter(group => group.items.length > 0 || !selectedCategory)
-    .sort((a, b) => a.category.order - b.category.order);
 
-  // Funções de CRUD - PRODUTOS
-  const handleSaveProduct = (product: MenuItem) => {
-    let updated: MenuItem[];
-    
-    if (editingProduct) {
-      updated = menuItems.map(item => item.id === product.id ? product : item);
-    } else {
-      const currentCount = menuItems.filter(item => item.restaurantId === user?.restaurantId).length;
-      if (!canAddProduct(currentCount, activePlan)) {
-        alert(
-          `🚫 Limite de produtos do plano atingido.\n\nPlano atual: ${activeRule.label}\nLimite: ${planLimitLabel(activeRule.maxProducts)} produtos\n\nFaça upgrade em /admin/plans para liberar mais produtos.`
-        );
+  const filteredItems = useMemo(() => {
+    let items = [...menuItems];
+
+    if (selectedCategory) {
+      items = items.filter(item => item.categoryId === selectedCategory);
+    }
+
+    if (searchTerm) {
+      const normalizedSearch = searchTerm.toLowerCase();
+      items = items.filter(item =>
+        item.name.toLowerCase().includes(normalizedSearch) ||
+        item.description?.toLowerCase().includes(normalizedSearch)
+      );
+    }
+
+    return items;
+  }, [menuItems, searchTerm, selectedCategory]);
+
+  const itemsByCategory = useMemo(() => {
+    return [...categories]
+      .sort((a, b) => a.order - b.order)
+      .map(category => ({
+        category,
+        items: filteredItems.filter(item => item.categoryId === category.id),
+      }))
+      .filter(group => group.items.length > 0 || !selectedCategory);
+  }, [categories, filteredItems, selectedCategory]);
+
+  useEffect(() => {
+    const loadMenuData = async () => {
+      const token = authService.getToken();
+
+      if (!user?.restaurantId || !token) {
+        setMenuItems([]);
+        setCategories([]);
+        setIsLoading(false);
         return;
       }
-      updated = [...menuItems, { ...product, id: `item_${Date.now()}`, restaurantId: user?.restaurantId || '' }];
-    }
-    
-    setMenuItems(updated);
-    saveMenuToLocalStorage(updated);
-    setEditingProduct(null);
-    setIsAddingProduct(false);
-  };
 
-  const handleDeleteProduct = (id: string) => {
-    const updated = menuItems.filter(item => item.id !== id);
-    setMenuItems(updated);
-    saveMenuToLocalStorage(updated);
-    setDeleteConfirm(null);
-  };
+      setIsLoading(true);
+      setFeedback(null);
 
-  // Funções de CRUD - CATEGORIAS
-  const handleSaveCategory = (category: MenuCategory) => {
-    let updated: MenuCategory[];
-    
-    if (editingCategory) {
-      updated = categories.map(cat => cat.id === category.id ? category : cat);
-    } else {
-      updated = [...categories, { ...category, id: `cat_${Date.now()}`, restaurantId: user?.restaurantId }];
-    }
-    
-    setCategories(updated);
-    saveCategoriesToLocalStorage(updated);
-    setEditingCategory(null);
-    setIsAddingCategory(false);
-  };
+      try {
+        const [categoriesResponse, itemsResponse] = await Promise.all([
+          menuService.getCategories(token),
+          menuService.getMenuItems(token),
+        ]);
 
-  const handleDeleteCategory = (id: string) => {
-    // Não deletar se tem produtos nessa categoria
-    const hasItems = menuItems.some(item => item.categoryId === id);
-    if (hasItems) {
-      alert('Não é possível deletar uma categoria que contém produtos. Mova os produtos para outra categoria primeiro.');
+        setCategories(categoriesResponse.data || []);
+        setMenuItems(itemsResponse.data || []);
+      } catch (error) {
+        setFeedback({
+          type: 'error',
+          message: error instanceof Error ? error.message : 'Erro ao carregar cardápio.',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void loadMenuData();
+  }, [user?.restaurantId]);
+
+  const handleSaveProduct = async (payload: ProductFormValues) => {
+    const token = authService.getToken();
+    if (!token) {
+      setFeedback({ type: 'error', message: 'Sessão expirada. Faça login novamente.' });
       return;
     }
-    const updated = categories.filter(cat => cat.id !== id);
-    setCategories(updated);
-    saveCategoriesToLocalStorage(updated);
+
+    if (!editingProduct) {
+      const currentCount = menuItems.length;
+      if (!canAddProduct(currentCount, activePlan)) {
+        setFeedback({
+          type: 'error',
+          message: `Limite do plano atingido: ${planLimitLabel(activeRule.maxProducts)} produtos.`,
+        });
+        return;
+      }
+    }
+
+    setIsSaving(true);
+    setFeedback(null);
+
+    try {
+      const response = editingProduct
+        ? await menuService.updateMenuItem(editingProduct.id, payload, token)
+        : await menuService.createMenuItem(payload, token);
+
+      if (!response.data) {
+        throw new Error(response.message || 'Não foi possível salvar o item.');
+      }
+
+      if (editingProduct) {
+        setMenuItems(prev => prev.map(item => item.id === response.data?.id ? response.data : item));
+      } else {
+        setMenuItems(prev => [...prev, response.data!]);
+      }
+
+      setFeedback({
+        type: 'success',
+        message: response.message || 'Item salvo com sucesso!',
+      });
+      setEditingProduct(null);
+      setIsAddingProduct(false);
+    } catch (error) {
+      setFeedback({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Erro ao salvar item.',
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  const handleDeleteProduct = async (item: MenuItem) => {
+    const token = authService.getToken();
+    if (!token) {
+      setFeedback({ type: 'error', message: 'Sessão expirada. Faça login novamente.' });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await menuService.deleteMenuItem(item.id, token);
+      setMenuItems(prev => prev.filter(currentItem => currentItem.id !== item.id));
+      setFeedback({ type: 'success', message: 'Item removido com sucesso!' });
+      setDeleteConfirm(null);
+    } catch (error) {
+      setFeedback({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Erro ao remover item.',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveCategory = async (payload: Pick<MenuCategory, 'name' | 'order'>) => {
+    const token = authService.getToken();
+    if (!token) {
+      setFeedback({ type: 'error', message: 'Sessão expirada. Faça login novamente.' });
+      return;
+    }
+
+    setIsSaving(true);
+    setFeedback(null);
+
+    try {
+      const response = editingCategory
+        ? await menuService.updateCategory(editingCategory.id, payload, token)
+        : await menuService.createCategory(payload, token);
+
+      if (!response.data) {
+        throw new Error(response.message || 'Não foi possível salvar a categoria.');
+      }
+
+      if (editingCategory) {
+        setCategories(prev => prev.map(category => category.id === response.data?.id ? response.data : category));
+      } else {
+        setCategories(prev => [...prev, response.data!]);
+      }
+
+      setFeedback({
+        type: 'success',
+        message: response.message || 'Categoria salva com sucesso!',
+      });
+      setEditingCategory(null);
+      setIsAddingCategory(false);
+    } catch (error) {
+      setFeedback({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Erro ao salvar categoria.',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteCategory = async (category: MenuCategory) => {
+    const token = authService.getToken();
+    if (!token) {
+      setFeedback({ type: 'error', message: 'Sessão expirada. Faça login novamente.' });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await menuService.deleteCategory(category.id, token);
+      setCategories(prev => prev.filter(currentCategory => currentCategory.id !== category.id));
+      if (selectedCategory === category.id) {
+        setSelectedCategory('');
+      }
+      setFeedback({ type: 'success', message: 'Categoria removida com sucesso!' });
+    } catch (error) {
+      setFeedback({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Erro ao remover categoria.',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (!user?.restaurantId) {
+    return (
+      <div className="w-full min-h-screen flex items-center justify-center" style={{ backgroundColor: '#f8f5ef' }}>
+        <Card className="max-w-xl text-center p-8">
+          <h1 className="text-2xl font-bold mb-3" style={{ color: '#660000' }}>
+            Conta sem restaurante vinculado
+          </h1>
+          <p className="text-gray-600">
+            Esta conta admin não possui `restaurantId`, então o CRUD de cardápio não pode ser carregado.
+          </p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full min-h-screen" style={{ backgroundColor: '#f8f5ef' }}>
-      {/* Header */}
       <div className="bg-white border-b border-gray-200 py-6 px-8">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-3xl font-bold mb-2" style={{ color: '#660000' }}>
-            📋 Gestão de Cardápio - {restaurant?.name}
+            Gestão de Cardápio - {restaurant?.name || 'Seu Restaurante'}
           </h1>
-          <p className="text-gray-600">Gerencie produtos, preços, categorias e acompanhamentos do seu cardápio</p>
+          <p className="text-gray-600">Gerencie produtos, preços, categorias e imagens do seu cardápio</p>
         </div>
       </div>
 
@@ -177,29 +279,34 @@ export default function Menu() {
           </div>
         </Card>
 
-        {/* Barra de Ações */}
+        {feedback && (
+          <Card className={`mb-6 border ${feedback.type === 'error' ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}`}>
+            <p className={feedback.type === 'error' ? 'text-red-700' : 'text-green-700'}>{feedback.message}</p>
+          </Card>
+        )}
+
         <div className="flex flex-col md:flex-row gap-4 mb-8">
           <Input
-            placeholder="🔍 Buscar produto..."
+            placeholder="Buscar produto..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="flex-1"
           />
-          <Button 
+          <Button
             onClick={() => setIsAddingProduct(true)}
             className="bg-[#660000] hover:bg-[#550000] text-white px-6 py-2 rounded-lg font-semibold"
+            disabled={categories.length === 0}
           >
             + Novo Produto
           </Button>
-          <Button 
+          <Button
             onClick={() => setShowCategoryManager(!showCategoryManager)}
             className="bg-[#8B6F47] hover:bg-[#7A6340] text-white px-6 py-2 rounded-lg font-semibold"
           >
-            ⚙️ Categorias
+            Categorias
           </Button>
         </div>
 
-        {/* Gerenciador de Categorias (Colapsável) */}
         {showCategoryManager && (
           <Card className="mb-8 p-6">
             <div className="flex justify-between items-center mb-4">
@@ -208,47 +315,49 @@ export default function Menu() {
                 onClick={() => setShowCategoryManager(false)}
                 className="text-gray-500 hover:text-gray-700 text-xl"
               >
-                ✕
+                x
               </button>
             </div>
-            
+
             <div className="space-y-2 mb-4 max-h-64 overflow-y-auto">
-              {categories
+              {[...categories]
                 .sort((a, b) => a.order - b.order)
-                .map(cat => (
-                  <div key={cat.id} className="flex justify-between items-center bg-gray-100 p-3 rounded-lg">
+                .map(category => (
+                  <div key={category.id} className="flex justify-between items-center bg-gray-100 p-3 rounded-lg">
                     <div className="flex-1">
-                      <span className="font-semibold text-gray-800">{cat.name}</span>
-                      <span className="text-xs text-gray-500 ml-2">({menuItems.filter(item => item.categoryId === cat.id).length} produtos)</span>
+                      <span className="font-semibold text-gray-800">{category.name}</span>
+                      <span className="text-xs text-gray-500 ml-2">
+                        ({menuItems.filter(item => item.categoryId === category.id).length} produtos)
+                      </span>
                     </div>
                     <div className="flex gap-2">
                       <button
-                        onClick={() => setEditingCategory(cat)}
+                        onClick={() => setEditingCategory(category)}
                         className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm"
                       >
-                        ✏️
+                        Editar
                       </button>
                       <button
-                        onClick={() => handleDeleteCategory(cat.id)}
+                        onClick={() => void handleDeleteCategory(category)}
                         className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm"
+                        disabled={isSaving}
                       >
-                        🗑️
+                        Excluir
                       </button>
                     </div>
                   </div>
                 ))}
             </div>
-            
+
             <Button
               onClick={() => setIsAddingCategory(true)}
               className="w-full bg-[#660000] hover:bg-[#550000] text-white px-4 py-2 rounded-lg font-semibold"
             >
-              ➕ Nova Categoria
+              + Nova Categoria
             </Button>
           </Card>
         )}
 
-        {/* Filtros de Categoria */}
         <Card className="mb-8">
           <h3 className="text-sm font-semibold text-gray-700 mb-4">FILTRAR POR CATEGORIA</h3>
           <div className="flex flex-wrap gap-2">
@@ -262,36 +371,38 @@ export default function Menu() {
             >
               Todas ({filteredItems.length})
             </button>
-            {categories
+            {[...categories]
               .sort((a, b) => a.order - b.order)
-              .map(cat => {
-                const count = menuItems.filter(
-                  item => item.restaurantId === user?.restaurantId && item.categoryId === cat.id
-                ).length;
+              .map(category => {
+                const count = menuItems.filter(item => item.categoryId === category.id).length;
                 return (
                   <button
-                    key={cat.id}
-                    onClick={() => setSelectedCategory(cat.id)}
+                    key={category.id}
+                    onClick={() => setSelectedCategory(category.id)}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                      selectedCategory === cat.id
+                      selectedCategory === category.id
                         ? 'bg-[#660000] text-white'
                         : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                     }`}
                   >
-                    {cat.name} ({count})
+                    {category.name} ({count})
                   </button>
                 );
               })}
           </div>
         </Card>
 
-        {/* Lista de Produtos */}
-        {filteredItems.length === 0 ? (
+        {isLoading ? (
           <Card className="text-center py-12">
-            <p className="text-gray-500 text-lg mb-4">📭 Nenhum produto encontrado</p>
-            <Button 
+            <p className="text-gray-500 text-lg">Carregando cardápio...</p>
+          </Card>
+        ) : filteredItems.length === 0 ? (
+          <Card className="text-center py-12">
+            <p className="text-gray-500 text-lg mb-4">Nenhum produto encontrado</p>
+            <Button
               onClick={() => setIsAddingProduct(true)}
               className="bg-[#660000] hover:bg-[#550000] text-white px-6 py-2 rounded-lg font-semibold"
+              disabled={categories.length === 0}
             >
               + Adicionar Primeiro Produto
             </Button>
@@ -307,87 +418,63 @@ export default function Menu() {
                   {group.items.map(item => (
                     <Card key={item.id} className="flex items-start justify-between p-6">
                       <div className="flex gap-6 flex-1">
-                        <div className="text-5xl">{item.image}</div>
+                        <ProductVisual item={item} />
                         <div className="flex-1">
                           <h3 className="text-lg font-bold text-gray-800 mb-1">{item.name}</h3>
                           <p className="text-sm text-gray-600 mb-3">{item.description}</p>
-                          
-                          {/* Ingredientes */}
+
                           {item.ingredients && (
                             <p className="text-xs text-gray-500 mb-2">
                               <strong>Ingredientes:</strong> {item.ingredients}
                             </p>
                           )}
-                          
-                          {/* Preços */}
+
                           <div className="flex flex-wrap gap-3 mb-3">
-                            <div className="text-sm">
-                              <span className="font-semibold text-gray-700">MyMenu:</span>
-                              <span className="text-[#660000] font-bold ml-1">R$ {(item.prices?.mymenu || 0).toFixed(2)}</span>
-                            </div>
-                            {(item.prices?.ifood || 0) > 0 && (
-                              <div className="text-sm">
-                                <span className="font-semibold text-gray-700">iFood:</span>
-                                <span className="text-[#660000] font-bold ml-1">R$ {(item.prices?.ifood || 0).toFixed(2)}</span>
-                              </div>
-                            )}
-                            {(item.prices?.ubereats || 0) > 0 && (
-                              <div className="text-sm">
-                                <span className="font-semibold text-gray-700">UberEats:</span>
-                                <span className="text-[#660000] font-bold ml-1">R$ {(item.prices?.ubereats || 0).toFixed(2)}</span>
-                              </div>
-                            )}
-                            {(item.prices?.rappi || 0) > 0 && (
-                              <div className="text-sm">
-                                <span className="font-semibold text-gray-700">Rappi:</span>
-                                <span className="text-[#660000] font-bold ml-1">R$ {(item.prices?.rappi || 0).toFixed(2)}</span>
-                              </div>
-                            )}
+                            <PriceTag label="MyMenu" value={item.prices?.mymenu || 0} />
+                            {(item.prices?.ifood || 0) > 0 && <PriceTag label="iFood" value={item.prices?.ifood || 0} />}
+                            {(item.prices?.ubereats || 0) > 0 && <PriceTag label="UberEats" value={item.prices?.ubereats || 0} />}
+                            {(item.prices?.rappi || 0) > 0 && <PriceTag label="Rappi" value={item.prices?.rappi || 0} />}
                           </div>
-                          
-                          {/* Status e Alérgenos */}
+
                           <div className="flex gap-3 text-xs flex-wrap">
                             <span className={`px-3 py-1 rounded-full ${
-                              item.available
-                                ? 'bg-green-100 text-green-700'
-                                : 'bg-red-100 text-red-700'
+                              item.available ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                             }`}>
-                              {item.available ? '✅ Disponível' : '❌ Indisponível'}
+                              {item.available ? 'Disponível' : 'Indisponível'}
                             </span>
                             {item.isOffer && (
                               <span className="px-3 py-1 rounded-full bg-yellow-100 text-yellow-800 font-semibold">
-                                🎁 Em Oferta - R$ {(item.offerPrice || 0).toFixed(2)}
+                                Oferta - R$ {(item.offerPrice || 0).toFixed(2)}
                               </span>
                             )}
                             {item.exclusive && (
                               <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-700">
-                                {item.exclusive === 'delivery' ? '🚗 Delivery' : '🏪 Presencial'}
+                                {item.exclusive === 'delivery' ? 'Delivery' : 'Presencial'}
                               </span>
                             )}
                             {(item.allergens?.length || 0) > 0 && (
                               <span className="px-3 py-1 rounded-full bg-yellow-100 text-yellow-700">
-                                ⚠️ Alérgenos: {(item.allergens || []).join(', ')}
+                                Alergenos: {(item.allergens || []).join(', ')}
                               </span>
                             )}
                           </div>
                         </div>
                       </div>
-                      
-                      {/* Botões de Ação */}
+
                       <div className="flex gap-2 flex-shrink-0 ml-4">
-                        <button 
+                        <button
                           onClick={() => setEditingProduct(item)}
                           className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors"
                           title="Editar"
                         >
-                          ✏️ Editar
+                          Editar
                         </button>
-                        <button 
-                          onClick={() => setDeleteConfirm(item.id)}
+                        <button
+                          onClick={() => setDeleteConfirm(item)}
                           className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors"
-                          title="Deletar"
+                          title="Excluir"
                         >
-                          🗑️ Deletar
+                          Excluir
                         </button>
                       </div>
                     </Card>
@@ -399,84 +486,151 @@ export default function Menu() {
         )}
       </div>
 
-      {/* Modal de Edição/Adição de Produto */}
       {(editingProduct || isAddingProduct) && (
         <ProductFormModal
           product={editingProduct}
-          onSave={handleSaveProduct}
+          categories={categories}
+          onSave={(payload) => void handleSaveProduct(payload)}
           onClose={() => {
             setEditingProduct(null);
             setIsAddingProduct(false);
           }}
-          restaurant={restaurant}
-          categories={categories}
+          isSubmitting={isSaving}
         />
       )}
 
-      {/* Modal de Edição/Adição de Categoria */}
       {(editingCategory || isAddingCategory) && (
         <CategoryFormModal
           category={editingCategory}
-          onSave={handleSaveCategory}
+          existingCategories={categories}
+          onSave={(payload) => void handleSaveCategory(payload)}
           onClose={() => {
             setEditingCategory(null);
             setIsAddingCategory(false);
           }}
-          existingCategories={categories}
+          isSubmitting={isSaving}
         />
       )}
 
-      {/* Modal de Confirmação de Deleção */}
       {deleteConfirm && (
         <DeleteConfirmModal
-          onConfirm={() => handleDeleteProduct(deleteConfirm)}
+          title="Excluir Produto?"
+          description="Esta ação não pode ser desfeita. Tem certeza?"
+          onConfirm={() => void handleDeleteProduct(deleteConfirm)}
           onCancel={() => setDeleteConfirm(null)}
+          isSubmitting={isSaving}
         />
       )}
     </div>
   );
 }
 
-// Componente Modal de Formulário
-function ProductFormModal({ 
-  product, 
-  onSave, 
-  onClose,
-  restaurant,
-  categories
-}: { 
-  product: MenuItem | null; 
-  onSave: (product: MenuItem) => void; 
-  onClose: () => void;
-  restaurant: any;
-  categories: MenuCategory[];
-}) {
-  const [formData, setFormData] = useState<MenuItem>(
-    product || {
-      id: '',
-      restaurantId: restaurant?.id || '',
-      name: '',
-      description: '',
-      ingredients: '',
-      image: '🍽️',
-      categoryId: categories[0]?.id || 'cat-1',
-      prices: { mymenu: 0, ifood: 0, ubereats: 0, rappi: 0 },
-      available: true,
-      allergens: [],
-      isOffer: false,
-      offerPrice: 0
-    }
+
+function ProductVisual({ item }: { item: MenuItem }) {
+  if (item.imageUrl) {
+    return (
+      <img
+        src={`${API_URL}${item.imageUrl}`}
+        alt={item.name}
+        className="w-24 h-24 rounded-2xl object-cover border border-gray-200 bg-gray-100"
+      />
+    );
+  }
+
+  return (
+    <div className="w-24 h-24 rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center text-5xl">
+      {item.image || '🍽️'}
+    </div>
   );
+}
+
+
+function PriceTag({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="text-sm">
+      <span className="font-semibold text-gray-700">{label}:</span>
+      <span className="text-[#660000] font-bold ml-1">R$ {value.toFixed(2)}</span>
+    </div>
+  );
+}
+
+
+function ProductFormModal({
+  product,
+  categories,
+  onSave,
+  onClose,
+  isSubmitting,
+}: {
+  product: MenuItem | null;
+  categories: MenuCategory[];
+  onSave: (payload: ProductFormValues) => void;
+  onClose: () => void;
+  isSubmitting: boolean;
+}) {
+  const [formData, setFormData] = useState<ProductFormValues>({
+    name: product?.name || '',
+    description: product?.description || '',
+    ingredients: product?.ingredients || '',
+    categoryId: product?.categoryId || categories[0]?.id || '',
+    prices: {
+      mymenu: product?.prices?.mymenu || 0,
+      ifood: product?.prices?.ifood || 0,
+      ubereats: product?.prices?.ubereats || 0,
+      rappi: product?.prices?.rappi || 0,
+    },
+    available: product?.available ?? true,
+    exclusive: product?.exclusive,
+    allergens: product?.allergens || [],
+    isOffer: product?.isOffer || false,
+    offerPrice: product?.offerPrice,
+    imageFile: null,
+  });
+  const [previewUrl, setPreviewUrl] = useState<string>(product?.imageUrl ? `${API_URL}${product.imageUrl}` : '');
+  const [error, setError] = useState('');
 
   const allergensOptions = ['gluten', 'dairy', 'eggs', 'nuts', 'soy', 'fish', 'shellfish'] as const;
 
   const handleAllergenToggle = (allergen: typeof allergensOptions[number]) => {
     setFormData(prev => ({
       ...prev,
-      allergens: prev.allergens?.includes(allergen)
-        ? (prev.allergens || []).filter(a => a !== allergen)
-        : [...(prev.allergens || []), allergen]
+      allergens: prev.allergens.includes(allergen)
+        ? prev.allergens.filter(item => item !== allergen)
+        : [...prev.allergens, allergen],
     }));
+  };
+
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] || null;
+    setFormData(prev => ({ ...prev, imageFile: file }));
+    if (file) {
+      setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const handleSubmit = () => {
+    if (!formData.name.trim()) {
+      setError('Informe o nome do produto.');
+      return;
+    }
+
+    if (!formData.categoryId) {
+      setError('Selecione uma categoria antes de salvar.');
+      return;
+    }
+
+    if ((formData.prices.mymenu || 0) <= 0) {
+      setError('O preço MyMenu deve ser maior que zero.');
+      return;
+    }
+
+    if (formData.isOffer && (!formData.offerPrice || formData.offerPrice >= formData.prices.mymenu)) {
+      setError('O preço promocional deve ser menor que o preço MyMenu.');
+      return;
+    }
+
+    setError('');
+    onSave(formData);
   };
 
   return (
@@ -484,21 +638,24 @@ function ProductFormModal({
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
           <h2 className="text-2xl font-bold" style={{ color: '#660000' }}>
-            {product ? '✏️ Editar Produto' : '➕ Novo Produto'}
+            {product ? 'Editar Produto' : 'Novo Produto'}
           </h2>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 text-2xl"
-          >
-            ✕
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl">
+            x
           </button>
         </div>
 
         <div className="p-6 space-y-4">
-          {/* Nome */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Nome do Produto</label>
+            <label htmlFor="product-name" className="block text-sm font-semibold text-gray-700 mb-1">Nome do Produto</label>
             <input
+              id="product-name"
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -507,10 +664,10 @@ function ProductFormModal({
             />
           </div>
 
-          {/* Descrição */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Descrição</label>
+            <label htmlFor="product-description" className="block text-sm font-semibold text-gray-700 mb-1">Descrição</label>
             <textarea
+              id="product-description"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#660000]"
@@ -519,10 +676,10 @@ function ProductFormModal({
             />
           </div>
 
-          {/* Ingredientes */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Ingredientes</label>
+            <label htmlFor="product-ingredients" className="block text-sm font-semibold text-gray-700 mb-1">Ingredientes</label>
             <input
+              id="product-ingredients"
               type="text"
               value={formData.ingredients}
               onChange={(e) => setFormData({ ...formData, ingredients: e.target.value })}
@@ -531,55 +688,64 @@ function ProductFormModal({
             />
           </div>
 
-          {/* Ícone/Imagem */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Ícone/Emoji (1 caractere)</label>
-            <input
-              type="text"
-              value={formData.image}
-              onChange={(e) => setFormData({ ...formData, image: e.target.value.slice(0, 2) })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#660000] text-2xl"
-              maxLength={2}
-            />
+            <label htmlFor="product-image" className="block text-sm font-semibold text-gray-700 mb-2">Imagem do Produto</label>
+            <div className="flex items-center gap-4">
+              <label htmlFor="product-image" className="px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-200">
+                Selecionar imagem
+                <input
+                  id="product-image"
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.webp"
+                  className="hidden"
+                  onChange={handleImageChange}
+                />
+              </label>
+              {previewUrl ? (
+                <img src={previewUrl} alt="Preview do produto" className="w-20 h-20 rounded-xl object-cover border border-gray-200" />
+              ) : (
+                <div className="w-20 h-20 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center text-3xl">
+                  {product?.image || '🍽️'}
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Categoria */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Categoria</label>
+            <label htmlFor="product-category" className="block text-sm font-semibold text-gray-700 mb-1">Categoria</label>
             <select
+              id="product-category"
               value={formData.categoryId}
               onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#660000]"
             >
-              {categories.sort((a, b) => a.order - b.order).map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              {categories.sort((a, b) => a.order - b.order).map(category => (
+                <option key={category.id} value={category.id}>{category.name}</option>
               ))}
             </select>
           </div>
 
-          {/* Preços */}
           <div className="grid grid-cols-2 gap-4">
             {(['mymenu', 'ifood', 'ubereats', 'rappi'] as const).map(platform => (
               <div key={platform}>
-                <label className="block text-sm font-semibold text-gray-700 mb-1 capitalize">
+                <label htmlFor={`price-${platform}`} className="block text-sm font-semibold text-gray-700 mb-1 capitalize">
                   Preço {platform}
                 </label>
                 <input
+                  id={`price-${platform}`}
                   type="number"
                   step="0.01"
-                  value={formData.prices?.[platform] || 0}
+                  value={formData.prices[platform] || 0}
                   onChange={(e) => setFormData({
                     ...formData,
-                    prices: { ...formData.prices, [platform]: parseFloat(e.target.value) || 0 }
+                    prices: { ...formData.prices, [platform]: Number(e.target.value) || 0 },
                   })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#660000]"
-                  placeholder="0.00"
                 />
               </div>
             ))}
           </div>
 
-          {/* Disponibilidade */}
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -589,11 +755,10 @@ function ProductFormModal({
               className="w-4 h-4 rounded border-gray-300 focus:ring-[#660000]"
             />
             <label htmlFor="available" className="text-sm font-semibold text-gray-700">
-              ✅ Produto Disponível
+              Produto disponível
             </label>
           </div>
 
-          {/* Oferta */}
           <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
             <div className="flex items-center gap-2 mb-3">
               <input
@@ -604,7 +769,7 @@ function ProductFormModal({
                 className="w-4 h-4 rounded border-gray-300 focus:ring-[#660000]"
               />
               <label htmlFor="isOffer" className="text-sm font-semibold text-gray-700">
-                🎁 Colocar em Oferta
+                Colocar em oferta
               </label>
             </div>
             {formData.isOffer && (
@@ -614,40 +779,37 @@ function ProductFormModal({
                   type="number"
                   step="0.01"
                   value={formData.offerPrice || 0}
-                  onChange={(e) => setFormData({ ...formData, offerPrice: parseFloat(e.target.value) || 0 })}
+                  onChange={(e) => setFormData({ ...formData, offerPrice: Number(e.target.value) || 0 })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#660000]"
-                  placeholder="0.00"
                 />
-                <p className="text-xs text-gray-600 mt-2">
-                  Preço original: R$ {formData.prices?.mymenu || 0}
-                </p>
               </div>
             )}
           </div>
 
-          {/* Tipo de Entrega */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">Tipo de Entrega</label>
             <select
               value={formData.exclusive || ''}
-              onChange={(e) => setFormData({ ...formData, exclusive: (e.target.value as any) || undefined })}
+              onChange={(e) => setFormData({
+                ...formData,
+                exclusive: (e.target.value as 'delivery' | 'presencial' | '') || undefined,
+              })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#660000]"
             >
               <option value="">Ambos (Delivery e Presencial)</option>
-              <option value="delivery">🚗 Delivery</option>
-              <option value="presencial">🏪 Presencial</option>
+              <option value="delivery">Delivery</option>
+              <option value="presencial">Presencial</option>
             </select>
           </div>
 
-          {/* Alérgenos */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Alérgenos</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Alergenos</label>
             <div className="grid grid-cols-2 gap-2">
               {allergensOptions.map(allergen => (
                 <label key={allergen} className="flex items-center gap-2 text-sm">
                   <input
                     type="checkbox"
-                    checked={(formData.allergens || []).includes(allergen)}
+                    checked={formData.allergens.includes(allergen)}
                     onChange={() => handleAllergenToggle(allergen)}
                     className="w-4 h-4 rounded border-gray-300 focus:ring-[#660000]"
                   />
@@ -658,7 +820,6 @@ function ProductFormModal({
           </div>
         </div>
 
-        {/* Botões de Ação */}
         <div className="sticky bottom-0 bg-gray-100 border-t border-gray-200 px-6 py-4 flex gap-3 justify-end">
           <button
             onClick={onClose}
@@ -667,10 +828,11 @@ function ProductFormModal({
             Cancelar
           </button>
           <button
-            onClick={() => onSave(formData)}
+            onClick={handleSubmit}
             className="px-6 py-2 bg-[#660000] hover:bg-[#550000] text-white rounded-lg font-semibold transition-colors"
+            disabled={isSubmitting || categories.length === 0}
           >
-            {product ? 'Salvar Alterações' : 'Adicionar Produto'}
+            {isSubmitting ? 'Salvando...' : product ? 'Salvar Alterações' : 'Adicionar Produto'}
           </button>
         </div>
       </div>
@@ -678,43 +840,63 @@ function ProductFormModal({
   );
 }
 
-// Componente Modal de Formulário de Categoria
-function CategoryFormModal({ 
-  category, 
-  onSave, 
+
+function CategoryFormModal({
+  category,
+  existingCategories,
+  onSave,
   onClose,
-  existingCategories
-}: { 
-  category: MenuCategory | null; 
-  onSave: (category: MenuCategory) => void; 
-  onClose: () => void;
+  isSubmitting,
+}: {
+  category: MenuCategory | null;
   existingCategories: MenuCategory[];
+  onSave: (payload: Pick<MenuCategory, 'name' | 'order'>) => void;
+  onClose: () => void;
+  isSubmitting: boolean;
 }) {
-  const [formData, setFormData] = useState<MenuCategory>(
-    category || {
-      id: '',
-      name: '',
-      order: existingCategories.length + 1
+  const [formData, setFormData] = useState({
+    name: category?.name || '',
+    order: category?.order || existingCategories.length + 1,
+  });
+  const [error, setError] = useState('');
+
+  const handleSubmit = () => {
+    if (!formData.name.trim()) {
+      setError('Informe o nome da categoria.');
+      return;
     }
-  );
+
+    if (formData.order < 1) {
+      setError('A ordem deve ser maior ou igual a 1.');
+      return;
+    }
+
+    setError('');
+    onSave({
+      name: formData.name.trim(),
+      order: formData.order,
+    });
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
         <div className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
           <h2 className="text-2xl font-bold" style={{ color: '#660000' }}>
-            {category ? '✏️ Editar Categoria' : '➕ Nova Categoria'}
+            {category ? 'Editar Categoria' : 'Nova Categoria'}
           </h2>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 text-2xl"
-          >
-            ✕
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl">
+            x
           </button>
         </div>
 
         <div className="p-6 space-y-4">
-          {/* Nome */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">Nome da Categoria</label>
             <input
@@ -726,39 +908,19 @@ function CategoryFormModal({
             />
           </div>
 
-          {/* Ordem */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">Ordem de Exibição</label>
             <input
               type="number"
               value={formData.order}
-              onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 1 })}
+              onChange={(e) => setFormData({ ...formData, order: Number(e.target.value) || 1 })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#660000]"
-              placeholder="1"
               min="1"
             />
             <p className="text-xs text-gray-500 mt-1">Menor número = aparecer primeiro</p>
           </div>
-
-          {/* Sugestões */}
-          <div className="bg-blue-50 p-3 rounded-lg text-sm">
-            <p className="font-semibold text-blue-900 mb-2">Sugestões de categorias:</p>
-            <ul className="text-blue-800 text-xs space-y-1">
-              <li>⭐ Destaques</li>
-              <li>🎁 Combos</li>
-              <li>🍕 Pizzas Clássicas</li>
-              <li>🍫 Pizzas Doces</li>
-              <li>🔥 Os Mais Avaliados</li>
-              <li>🥤 Bebidas</li>
-              <li>🍰 Sobremesas</li>
-              <li>🍟 Acompanhamentos</li>
-              <li>⏰ Pratos do Dia</li>
-              <li>💰 Ofertas</li>
-            </ul>
-          </div>
         </div>
 
-        {/* Botões de Ação */}
         <div className="bg-gray-100 border-t border-gray-200 px-6 py-4 flex gap-3 justify-end">
           <button
             onClick={onClose}
@@ -767,10 +929,11 @@ function CategoryFormModal({
             Cancelar
           </button>
           <button
-            onClick={() => onSave(formData)}
+            onClick={handleSubmit}
             className="px-6 py-2 bg-[#660000] hover:bg-[#550000] text-white rounded-lg font-semibold transition-colors"
+            disabled={isSubmitting}
           >
-            {category ? 'Salvar Categoria' : 'Criar Categoria'}
+            {isSubmitting ? 'Salvando...' : category ? 'Salvar Categoria' : 'Criar Categoria'}
           </button>
         </div>
       </div>
@@ -778,22 +941,28 @@ function CategoryFormModal({
   );
 }
 
-// Componente Modal de Confirmação de Deleção
-function DeleteConfirmModal({ 
-  onConfirm, 
-  onCancel 
-}: { 
-  onConfirm: () => void; 
+
+function DeleteConfirmModal({
+  title,
+  description,
+  onConfirm,
+  onCancel,
+  isSubmitting,
+}: {
+  title: string;
+  description: string;
+  onConfirm: () => void;
   onCancel: () => void;
+  isSubmitting: boolean;
 }) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-sm w-full">
         <div className="p-6 text-center">
-          <div className="text-5xl mb-4">⚠️</div>
-          <h2 className="text-xl font-bold text-gray-800 mb-2">Deletar Produto?</h2>
-          <p className="text-gray-600 mb-6">Esta ação não pode ser desfeita. Tem certeza?</p>
-          
+          <div className="text-5xl mb-4">!</div>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">{title}</h2>
+          <p className="text-gray-600 mb-6">{description}</p>
+
           <div className="flex gap-3 justify-center">
             <button
               onClick={onCancel}
@@ -804,8 +973,9 @@ function DeleteConfirmModal({
             <button
               onClick={onConfirm}
               className="px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold transition-colors"
+              disabled={isSubmitting}
             >
-              Deletar
+              {isSubmitting ? 'Excluindo...' : 'Excluir'}
             </button>
           </div>
         </div>
