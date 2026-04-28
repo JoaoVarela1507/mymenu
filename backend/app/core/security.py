@@ -27,7 +27,15 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     return encoded_jwt
 
 def decode_access_token(token: str) -> Optional[dict]:
-    """Decode a JWT access token"""
+    """Decode a JWT access token or mock token for demo"""
+    if token.startswith("mock-token-"):
+        role = token.replace("mock-token-", "")
+        return {
+            "sub": f"mock-user-{role}",
+            "role": role,
+            "email": "admin@restaurante.com" if role == "admin" else "consumidor@email.com",
+        }
+    
     try:
         payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
         return payload
