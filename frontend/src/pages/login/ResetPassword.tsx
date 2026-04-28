@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Input, Button, ImageCarousel } from '../../components/shared';
+import { authService } from '../../services/api';
 import './Login.css';
 
 export default function ResetPassword() {
@@ -50,28 +51,16 @@ export default function ResetPassword() {
     e.preventDefault();
     setError('');
 
-    if (!validatePassword()) {
+    if (!token || !validatePassword()) {
       return;
     }
 
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          token,
-          newPassword: password,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.message || 'Erro ao redefinir a senha. Tente novamente.');
+      const response = await authService.resetPassword(token, password);
+      if (!response.success) {
+        setError(response.message || 'Erro ao redefinir a senha. Tente novamente.');
         return;
       }
 
@@ -80,8 +69,7 @@ export default function ResetPassword() {
         navigate('/login');
       }, 2000);
     } catch (err) {
-      setError('Erro de conexão. Verifique sua internet e tente novamente.');
-      console.error('Erro ao redefinir senha:', err);
+      setError(err instanceof Error ? err.message : 'Erro de conexão. Verifique sua internet e tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -96,9 +84,7 @@ export default function ResetPassword() {
 
         <div className="w-full lg:w-5/12 flex items-center justify-center p-6 bg-gradient-to-b from-gray-50 to-gray-100 overflow-y-auto relative z-10">
           <div className="glass-card-golden w-full max-w-lg shadow-2xl p-0 overflow-hidden flex flex-col">
-            <div 
-              className="bg-[#A30000] flex-shrink-0 flex items-center border-b-4 border-[#8B0000] relative p-6"
-            >
+            <div className="bg-[#A30000] flex-shrink-0 flex items-center border-b-4 border-[#8B0000] relative p-6">
               <h1 className="text-white text-2xl font-bold m-0">Link Inválido</h1>
             </div>
 
@@ -106,8 +92,8 @@ export default function ResetPassword() {
               <p className="text-gray-700 text-center">
                 Este link de redefinição de senha é inválido ou expirou.
               </p>
-              <Link to="/forgot-password">
-                <Button 
+              <Link to="/recuperar-senha">
+                <Button
                   type="button"
                   className="w-full bg-[#A30000] text-white hover:bg-[#8B0000] transition-colors py-2 rounded-lg font-bold"
                 >
@@ -123,19 +109,14 @@ export default function ResetPassword() {
 
   return (
     <div className="min-h-screen w-full relative overflow-hidden flex">
-      {/* Coluna esquerda - Carrossel (55%) */}
       <div className="hidden lg:flex lg:w-7/12 relative">
         <ImageCarousel />
       </div>
 
-      {/* Coluna direita - Formulário (45%) */}
       <div className="w-full lg:w-5/12 flex items-center justify-center p-6 bg-gradient-to-b from-gray-50 to-gray-100 overflow-y-auto relative z-10">
-        {/* Card com Glassmorfismo */}
         <div className="glass-card-golden w-full max-w-lg shadow-2xl p-0 overflow-hidden flex flex-col">
-          
-          {/* FAIXA VERMELHA */}
-          <div 
-            className="bg-[#A30000] flex-shrink-0 flex items-center border-b-4 border-[#8B0000] relative" 
+          <div
+            className="bg-[#A30000] flex-shrink-0 flex items-center border-b-4 border-[#8B0000] relative"
             style={{
               marginLeft: '-50px',
               marginRight: '-50px',
@@ -149,7 +130,6 @@ export default function ResetPassword() {
               position: 'relative'
             }}
           >
-            {/* Botão Voltar */}
             <button
               onClick={() => navigate(-1)}
               className="text-white hover:opacity-80 transition-opacity font-bold"
@@ -170,20 +150,17 @@ export default function ResetPassword() {
               <img src="/assets/voltar.png" alt="Voltar" style={{ width: '32px', height: '32px' }} />
             </button>
 
-            {/* Logo */}
             <div className="flex-1 text-center">
-              <img 
-                src="/assets/logo.png" 
-                alt="Logo" 
-                style={{ width: '60px', height: '60px', margin: '0 auto' }} 
+              <img
+                src="/assets/logo.png"
+                alt="Logo"
+                style={{ width: '60px', height: '60px', margin: '0 auto' }}
               />
             </div>
 
-            {/* Espaço vazio para balanceamento */}
             <div style={{ width: '180px' }}></div>
           </div>
 
-          {/* CONTEÚDO PRINCIPAL */}
           <div className="p-8 flex flex-col gap-6">
             <h2 className="text-2xl font-bold text-gray-900 text-center m-0">
               Redefinir Senha
@@ -199,14 +176,11 @@ export default function ResetPassword() {
 
             {error && (
               <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-red-800 font-medium">
-                  ✗ {error}
-                </p>
+                <p className="text-red-800 font-medium">{error}</p>
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              {/* Campo Nova Senha */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Nova Senha
@@ -230,7 +204,6 @@ export default function ResetPassword() {
                 </div>
               </div>
 
-              {/* Campo Confirmar Senha */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Confirmar Senha
@@ -254,7 +227,6 @@ export default function ResetPassword() {
                 </div>
               </div>
 
-              {/* Botão Redefinir */}
               <Button
                 type="submit"
                 disabled={loading || success}
@@ -264,7 +236,6 @@ export default function ResetPassword() {
               </Button>
             </form>
 
-            {/* Link para login */}
             <div className="text-center mt-4">
               <p className="text-gray-600 text-sm">
                 Lembrou sua senha?{' '}
