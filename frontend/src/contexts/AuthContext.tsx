@@ -1,46 +1,47 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import type { AuthUser, LoginCredentials } from '../types/auth';
-import { mockLogin } from '../lib/mockAuth';
+import { apiLogin, apiLogout, onAuthChanged } from '../services/authService';
 
 interface AuthContextType {
   user: AuthUser | null;
   login: (credentials: LoginCredentials) => Promise<boolean>;
   logout: () => void;
   isAuthenticated: boolean;
+  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(() => {
-    const stored = localStorage.getItem('mymenu_user');
-    return stored ? JSON.parse(stored) : null;
-  });
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthChanged((firebaseUser) => {
+      setUser(firebaseUser);
+      setLoading(false);
+    });
+    return unsubscribe;
+  }, []);
 
   const login = async (credentials: LoginCredentials): Promise<boolean> => {
-    const authenticatedUser = mockLogin(credentials.email, credentials.password);
-    
+    const authenticatedUser = await apiLogin(credentials.email, credentials.password);
     if (authenticatedUser) {
       setUser(authenticatedUser);
-      localStorage.setItem('mymenu_user', JSON.stringify(authenticatedUser));
       return true;
     }
-    
     return false;
   };
 
   const logout = () => {
+    apiLogout();
     setUser(null);
-    localStorage.removeItem('mymenu_user');
   };
 
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><span className="text-[#C92924] font-bold">Carregando...</span></div>;
+
   return (
-    <AuthContext.Provider value={{
-      user,
-      login,
-      logout,
-      isAuthenticated: !!user,
-    }}>
+    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user, loading }}>
       {children}
     </AuthContext.Provider>
   );
@@ -48,9 +49,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
+  if (!context) throw new Error('useAuth must be used within AuthProvider');
   return context;
 }
-

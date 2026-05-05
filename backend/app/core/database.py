@@ -1,6 +1,7 @@
 from pymongo import MongoClient
 from typing import Optional
 from app.core.config import settings
+import certifi
 
 class Database:
     client: Optional[MongoClient] = None
@@ -8,7 +9,10 @@ class Database:
 
     @staticmethod
     def connect_to_mongo():
-        Database.client = MongoClient(settings.mongodb_url)
+        Database.client = MongoClient(
+            settings.mongodb_url,
+            tlsCAFile=certifi.where(),
+        )
         Database.db = Database.client[settings.database_name]
         print("Connected to MongoDB")
 

@@ -1,7 +1,7 @@
-import { mockUsers } from '../lib/mockAuth';
 import { mockOrders } from '../lib/mockData';
 import { mockMenuItems } from '../lib/mockMenu';
 import type { OrderStatus } from '../types';
+import { apiRegister, getToken } from './authService';
 
 // Types
 interface ApiResponse<T = any> {
@@ -60,171 +60,35 @@ interface OrderData {
   notes?: string;
 }
 
-// Mock storage for created users
-const createdUsers: any[] = [];
-
 // Mock storage for menu items
 let menuItemsStore = [...mockMenuItems];
 
 // Simulate async delay
 const delay = (ms: number = 300) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Mock JWT token generator
-const generateMockToken = (email: string): string => {
-  return `mock_token_${email}_${Date.now()}`;
-};
-
 // Service de autenticação
 export const authService = {
   registerConsumer: async (data: RegisterConsumerData): Promise<ApiResponse> => {
-    await delay();
-    
-    // Check if email already exists
-    const emailExists = [...mockUsers, ...createdUsers].some(u => u.email === data.email);
-    if (emailExists) {
-      return {
-        success: false,
-        message: 'Este email já está registrado.'
-      };
-    }
-
-    // Create new user
-    const newUser = {
-      id: String(Date.now()),
-      name: data.name,
-      email: data.email,
-      type: 'consumer'
-    };
-
-    createdUsers.push(newUser);
-    const token = generateMockToken(data.email);
-
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(newUser));
-
-    return {
-      success: true,
-      message: 'Cadastro realizado com sucesso!',
-      user: newUser,
-      token
-    };
+    const result = await apiRegister({ name: data.name, email: data.email, password: data.password, role: 'consumer' });
+    return { success: result.success, message: result.message };
   },
 
   registerRestaurant: async (data: RegisterRestaurantData): Promise<ApiResponse> => {
-    await delay();
-    
-    // Check if email already exists
-    const emailExists = [...mockUsers, ...createdUsers].some(u => u.email === data.email);
-    if (emailExists) {
-      return {
-        success: false,
-        message: 'Este email já está registrado.'
-      };
-    }
-
-    // Validate CNPJ (simple validation)
     if (data.cnpj.length < 14) {
-      return {
-        success: false,
-        message: 'CNPJ inválido.'
-      };
+      return { success: false, message: 'CNPJ inválido.' };
     }
-
-    // Create new restaurant user
-    const newUser = {
-      id: String(Date.now()),
-      name: data.name,
-      email: data.email,
-      type: 'admin',
-      restaurantId: `rest_${Date.now()}`,
-      restaurantName: data.restaurantName,
-      cnpj: data.cnpj,
-      phone: data.phone,
-      address: data.address,
-      category: data.category
-    };
-
-    createdUsers.push(newUser);
-    const token = generateMockToken(data.email);
-
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(newUser));
-
-    return {
-      success: true,
-      message: 'Cadastro do restaurante realizado com sucesso!',
-      user: newUser,
-      token
-    };
-  },
-
-  login: async (email: string, password: string): Promise<ApiResponse> => {
-    await delay();
-    
-    // Try to find user in mock users or created users
-    const allUsers = [...mockUsers, ...createdUsers];
-    const user = allUsers.find(u => u.email === email);
-
-    if (!user) {
-      return {
-        success: false,
-        message: 'Email ou senha inválida.'
-      };
-    }
-
-    // Validate password (mock validation: all passwords are '123456')
-    if (password !== '123456') {
-      return {
-        success: false,
-        message: 'Email ou senha inválida.'
-      };
-    }
-
-    const token = generateMockToken(email);
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
-
-    return {
-      success: true,
-      message: 'Login realizado com sucesso!',
-      user,
-      token
-    };
+    const result = await apiRegister({ name: data.name, email: data.email, password: data.password, role: 'admin' });
+    return { success: result.success, message: result.message };
   },
 
   logout: (): void => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    localStorage.removeItem('mymenu_token');
+    localStorage.removeItem('mymenu_user');
   },
 
-  getMe: async (token: string): Promise<ApiResponse> => {
-    await delay();
-    
-    const userStr = localStorage.getItem('user');
-    if (!userStr || !token) {
-      return {
-        success: false,
-        message: 'Não autenticado.'
-      };
-    }
-
-    try {
-      const user = JSON.parse(userStr);
-      return {
-        success: true,
-        user
-      };
-    } catch {
-      return {
-        success: false,
-        message: 'Erro ao obter dados do usuário.'
-      };
-    }
-  },
-
-  getToken: (): string | null => localStorage.getItem('token'),
+  getToken: (): string | null => getToken(),
   getUser: (): any => {
-    const user = localStorage.getItem('user');
+    const user = localStorage.getItem('mymenu_user');
     return user ? JSON.parse(user) : null;
   }
 };

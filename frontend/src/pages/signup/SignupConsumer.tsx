@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Input, Button, ImageCarousel } from '../../components/shared';
 import { authService } from '../../services/api';
+import { loginWithGoogle } from '../../services/authService';
+import { useAuth } from '../../contexts/AuthContext';
 import '../login/Login';
 
 export default function SignupConsumer() {
@@ -13,6 +15,11 @@ export default function SignupConsumer() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (user) navigate('/', { replace: true });
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,6 +54,18 @@ export default function SignupConsumer() {
     } catch (err) {
       setError('Erro ao conectar ao servidor. Verifique sua conexão.');
     } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogle = async () => {
+    setError('');
+    setLoading(true);
+    const googleUser = await loginWithGoogle();
+    if (googleUser) {
+      navigate('/');
+    } else {
+      setError('Erro ao entrar com Google. Tente novamente.');
       setLoading(false);
     }
   };
@@ -179,6 +198,16 @@ export default function SignupConsumer() {
               >
                 {loading ? 'Criando conta...' : 'Acessar conta'}
               </Button>
+
+              <button
+                type="button"
+                onClick={handleGoogle}
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-2 py-2 px-4 border-2 border-gray-300 rounded-full bg-white hover:border-[#D4AF37] transition-colors text-sm font-bold text-gray-700"
+              >
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-4 h-4" />
+                Cadastrar com Google
+              </button>
             </form>
 
             <div className="text-center pt-4 border-t border-[#D4AF37]/30 mt-4">

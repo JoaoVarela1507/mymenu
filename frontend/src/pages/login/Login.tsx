@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { loginWithGoogle } from '../../services/authService';
 import { Input, Button, ImageCarousel } from '../../components/shared';
 import './Login.css';
 
@@ -9,8 +10,12 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) navigate('/', { replace: true });
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,6 +31,18 @@ export default function Login() {
     }
 
     setLoading(false);
+  };
+
+  const handleGoogle = async () => {
+    setError('');
+    setLoading(true);
+    const googleUser = await loginWithGoogle();
+    if (googleUser) {
+      navigate('/');
+    } else {
+      setError('Erro ao entrar com Google. Tente novamente.');
+      setLoading(false);
+    }
   };
 
   return (
@@ -93,6 +110,16 @@ export default function Login() {
           >
             {loading ? 'Entrando...' : 'Entrar'}
           </Button>
+
+          <button
+            type="button"
+            onClick={handleGoogle}
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-2 py-1.5 px-4 border-2 border-gray-300 rounded-lg bg-white hover:border-[#D4AF37] transition-colors text-xs font-bold text-gray-700"
+          >
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-4 h-4" />
+            Entrar com Google
+          </button>
         </form>
 
         <div className="text-center mt-1.5 pt-1 border-t border-[#D4AF37]/30">
