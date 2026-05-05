@@ -54,3 +54,8 @@ htmlcov/
 # Database
 *.db
 *.sqlite
+
+# Firebase / Google credentials
+firebase-service-account*.json
+*-service-account*.json
+service-account*.json
