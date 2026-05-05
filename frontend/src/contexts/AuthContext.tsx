@@ -1,10 +1,20 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react';
 import type { AuthUser, LoginCredentials } from '../types/auth';
-import { apiLogin, apiLogout, onAuthChanged } from '../services/authService';
+import { apiLoginWithProfile, apiLogout, onAuthChanged, checkAvailableProfiles } from '../services/authService';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../lib/firebase';
+
+interface LoginResult {
+  success: boolean;
+  needsProfileChoice?: boolean;
+  email?: string;
+  password?: string;
+}
 
 interface AuthContextType {
   user: AuthUser | null;
-  login: (credentials: LoginCredentials) => Promise<boolean>;
+  login: (credentials: LoginCredentials) => Promise<LoginResult>;
+  loginWithProfile: (email: string, password: string, profile: 'consumer' | 'admin') => Promise<boolean>;
   logout: () => void;
   isAuthenticated: boolean;
   loading: boolean;
@@ -15,19 +25,51 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  // Bloqueia o onAuthChanged de setar user automaticamente durante login manual
+  const suppressAuthChange = useRef(false);
 
   useEffect(() => {
     const unsubscribe = onAuthChanged((firebaseUser) => {
+      if (suppressAuthChange.current) return;
       setUser(firebaseUser);
       setLoading(false);
     });
     return unsubscribe;
   }, []);
 
-  const login = async (credentials: LoginCredentials): Promise<boolean> => {
-    const authenticatedUser = await apiLogin(credentials.email, credentials.password);
-    if (authenticatedUser) {
-      setUser(authenticatedUser);
+  const login = async (credentials: LoginCredentials): Promise<LoginResult> => {
+    try {
+      suppressAuthChange.current = true;
+
+      const { user: fbUser } = await signInWithEmailAndPassword(auth, credentials.email, credentials.password);
+      const profiles = await checkAvailableProfiles(fbUser.uid);
+
+      if (profiles.length > 1) {
+        // Tem dois perfis — devolve para o Login.tsx mostrar o modal
+        suppressAuthChange.current = false;
+        return { success: true, needsProfileChoice: true, email: credentials.email, password: credentials.password };
+      }
+
+      // Só um perfil — entra direto
+      const authUser = await apiLoginWithProfile('', '', profiles[0]);
+      suppressAuthChange.current = false;
+      if (authUser) {
+        setUser(authUser);
+        setLoading(false);
+        return { success: true };
+      }
+      return { success: false };
+    } catch {
+      suppressAuthChange.current = false;
+      return { success: false };
+    }
+  };
+
+  const loginWithProfile = async (email: string, password: string, profile: 'consumer' | 'admin'): Promise<boolean> => {
+    const authUser = await apiLoginWithProfile('', '', profile);
+    if (authUser) {
+      setUser(authUser);
+      setLoading(false);
       return true;
     }
     return false;
@@ -38,10 +80,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><span className="text-[#C92924] font-bold">Carregando...</span></div>;
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <span className="text-[#C92924] font-bold">Carregando...</span>
+    </div>
+  );
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, loginWithProfile, isAuthenticated: !!user, loading }}>
       {children}
     </AuthContext.Provider>
   );

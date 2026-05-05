@@ -7,6 +7,7 @@ export const menuItems: MenuItem[] = [
     icon: '🏠',
     path: '/',
     allowedRoles: ['consumer'],
+    requiresAuth: false,
   },
   {
     id: 'favorites',
@@ -14,6 +15,7 @@ export const menuItems: MenuItem[] = [
     icon: '❤️',
     path: '/favoritos',
     allowedRoles: ['consumer'],
+    requiresAuth: true,
   },
   {
     id: 'offers',
@@ -21,6 +23,7 @@ export const menuItems: MenuItem[] = [
     icon: '🎁',
     path: '/ofertas',
     allowedRoles: ['consumer'],
+    requiresAuth: false,
   },
   {
     id: 'history',
@@ -28,6 +31,7 @@ export const menuItems: MenuItem[] = [
     icon: '⏱️',
     path: '/historico',
     allowedRoles: ['consumer'],
+    requiresAuth: true,
   },
   {
     id: 'ratings',
@@ -35,6 +39,7 @@ export const menuItems: MenuItem[] = [
     icon: '⭐',
     path: '/top-avaliadas',
     allowedRoles: ['consumer'],
+    requiresAuth: false,
   },
   {
     id: 'profile',
@@ -42,6 +47,7 @@ export const menuItems: MenuItem[] = [
     icon: '👤',
     path: '/perfil',
     allowedRoles: ['consumer'],
+    requiresAuth: true,
   },
   // SEPARADOR VISUAL
   {

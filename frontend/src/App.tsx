@@ -39,21 +39,19 @@ function App() {
             <Route path="/cadastro/consumidor" element={<SignupConsumer />} />
             <Route path="/cadastro/restaurante" element={<SignupRestaurant />} />
 
-            {/* Rotas com Sidebar (Admin e Consumidor) */}
-            <Route path="/" element={
-              <ProtectedRoute allowedTypes={['consumer', 'admin', 'staff']}>
-                <AdminLayout />
-              </ProtectedRoute>
-            }>
-              {/* Home Consumidor */}
+            {/* Rotas com Sidebar */}
+            <Route path="/" element={<AdminLayout />}>
+              {/* Rotas públicas */}
               <Route index element={<Home />} />
               <Route path="restaurante/:slug" element={<RestaurantPage />} />
               <Route path="proximos" element={<Nearby />} />
-              <Route path="favoritos" element={<Favorites />} />
-              <Route path="perfil" element={<ConsumerProfile />} />
-              <Route path="historico" element={<OrderHistory />} />
               <Route path="top-avaliadas" element={<TopRated />} />
               <Route path="ofertas" element={<Offers />} />
+
+              {/* Rotas que exigem login (mostram prompt in-page) */}
+              <Route path="favoritos" element={<ProtectedRoute allowedTypes={['consumer']} soft><Favorites /></ProtectedRoute>} />
+              <Route path="perfil" element={<ProtectedRoute allowedTypes={['consumer']} soft><ConsumerProfile /></ProtectedRoute>} />
+              <Route path="historico" element={<ProtectedRoute allowedTypes={['consumer']} soft><OrderHistory /></ProtectedRoute>} />
 
               {/* Admin */}
               <Route path="admin/dashboard" element={

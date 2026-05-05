@@ -14,6 +14,19 @@ export default function SignupConsumer() {
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [emailChecking, setEmailChecking] = useState(false);
+  const [emailInfo, setEmailInfo] = useState<'free' | 'has_restaurant' | null>(null);
+
+  const checkEmail = async (email: string) => {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+    setEmailChecking(true);
+    try {
+      const res = await fetch(`http://localhost:8000/restaurant/check-email?email=${encodeURIComponent(email)}`);
+      const data = await res.json();
+      setEmailInfo(data.exists ? 'has_restaurant' : 'free');
+    } catch {}
+    setEmailChecking(false);
+  };
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -146,12 +159,25 @@ export default function SignupConsumer() {
                 label="Email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => { setEmail(e.target.value); setEmailInfo(null); }}
+                onBlur={(e) => checkEmail(e.target.value)}
                 placeholder="seu@email.com"
                 className="px-3 py-1.5 text-sm"
                 required
               />
 
+              {emailChecking && (
+                <p className="text-xs text-gray-400">Verificando email...</p>
+              )}
+              {emailInfo === 'has_restaurant' && (
+                <div className="bg-amber-50 border border-amber-300 rounded-lg p-3">
+                  <p className="text-amber-700 text-xs font-medium">⚠️ Este email já possui uma conta. <strong>Não é necessário criar outra conta</strong> — faça login com sua senha atual e escolha o perfil Consumidor.</p>
+                  <Link to="/login" className="inline-block mt-2 text-xs font-bold text-amber-800 underline">Ir para o login →</Link>
+                </div>
+              )}
+
+              {emailInfo !== 'has_restaurant' && (
+              <>
               <Input
                 label="Senha"
                 type="password"
@@ -208,6 +234,8 @@ export default function SignupConsumer() {
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-4 h-4" />
                 Cadastrar com Google
               </button>
+              </>
+              )}
             </form>
 
             <div className="text-center pt-4 border-t border-[#D4AF37]/30 mt-4">

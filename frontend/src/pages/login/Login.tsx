@@ -10,7 +10,8 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login, user } = useAuth();
+  const [profileModal, setProfileModal] = useState<{ email: string; password: string } | null>(null);
+  const { login, loginWithProfile, user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -22,14 +23,29 @@ export default function Login() {
     setError('');
     setLoading(true);
 
-    const success = await login({ email, password });
+    const result = await login({ email, password });
 
-    if (success) {
+    if (result.success && result.needsProfileChoice) {
+      setProfileModal({ email, password });
+    } else if (result.success) {
       navigate('/');
     } else {
       setError('Email ou senha inválidos');
     }
 
+    setLoading(false);
+  };
+
+  const handleSelectProfile = async (profile: 'consumer' | 'admin') => {
+    if (!profileModal) return;
+    setLoading(true);
+    const ok = await loginWithProfile(profileModal.email, profileModal.password, profile);
+    if (ok) {
+      navigate('/');
+    } else {
+      setError('Erro ao entrar. Tente novamente.');
+      setProfileModal(null);
+    }
     setLoading(false);
   };
 
@@ -47,6 +63,49 @@ export default function Login() {
 
   return (
     <div className="min-h-screen w-full relative overflow-hidden flex">
+
+      {/* Modal de seleção de perfil */}
+      {profileModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm mx-4 border-2 border-[#D4AF37]">
+            <div className="text-center mb-6">
+              <div className="text-4xl mb-3">👤</div>
+              <h2 className="text-lg font-bold text-[#C92924]">Com qual perfil deseja entrar?</h2>
+              <p className="text-xs text-gray-500 mt-1">Sua conta possui dois perfis cadastrados</p>
+            </div>
+            <div className="space-y-3">
+              <button
+                onClick={() => handleSelectProfile('consumer')}
+                disabled={loading}
+                className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-gray-200 hover:border-[#C92924] hover:bg-red-50 transition-all text-left"
+              >
+                <span className="text-3xl">🛒</span>
+                <div>
+                  <p className="font-bold text-gray-800 text-sm">Consumidor</p>
+                  <p className="text-xs text-gray-500">Explorar restaurantes e fazer pedidos</p>
+                </div>
+              </button>
+              <button
+                onClick={() => handleSelectProfile('admin')}
+                disabled={loading}
+                className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-gray-200 hover:border-[#C92924] hover:bg-red-50 transition-all text-left"
+              >
+                <span className="text-3xl">🏪</span>
+                <div>
+                  <p className="font-bold text-gray-800 text-sm">Meu Restaurante</p>
+                  <p className="text-xs text-gray-500">Gerenciar cardápio, pedidos e configurações</p>
+                </div>
+              </button>
+            </div>
+            <button
+              onClick={() => setProfileModal(null)}
+              className="w-full mt-4 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
       {/* Coluna esquerda - Carrossel (55%) */}
       <div className="hidden lg:flex lg:w-7/12 relative">
         <ImageCarousel />
@@ -54,6 +113,11 @@ export default function Login() {
 
       {/* Coluna direita - Formulário de Login (45%) */}
       <div className="w-full lg:w-5/12 flex items-center justify-center p-6 bg-gradient-to-b from-gray-50 to-gray-100 overflow-y-auto relative z-10">
+        <Link to="/" className="absolute top-4 left-4 flex items-center justify-center w-10 h-10 rounded-full bg-[#C92924] hover:bg-[#a81f1a] shadow-md transition-colors z-10" title="Voltar à home">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+            <path d="M19 12H5M12 5l-7 7 7 7"/>
+          </svg>
+        </Link>
         {/* Card com Glassmorfismo - Centralizado */}
         <div className="glass-card-golden w-full max-w-lg shadow-2xl">
         <div className="text-center mb-2">

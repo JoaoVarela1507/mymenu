@@ -2,14 +2,17 @@ import { useParams, Link } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
 import { mockRestaurants } from '../../lib/mockRestaurants';
 import { mockCategories, mockMenuItems } from '../../lib/mockMenu';
-import { Badge } from '../../components/shared';
+import { Badge, LoginPromptModal } from '../../components/shared';
 import { useScrollToTop } from '../../hooks/useScrollToTop';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function RestaurantPage() {
   useScrollToTop();
   const { slug } = useParams<{ slug: string }>();
+  const { isAuthenticated } = useAuth();
   const restaurant = mockRestaurants.find(r => r.slug === slug);
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   if (!restaurant) {
     return (
@@ -76,11 +79,19 @@ export default function RestaurantPage() {
               </div>
             </div>
             
-            <div className="bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 border border-white/20">
+            <div
+              className={`bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 border border-white/20 ${!isAuthenticated ? 'cursor-pointer' : ''}`}
+              onClick={!isAuthenticated ? () => setShowLoginModal(true) : undefined}
+              title={!isAuthenticated ? 'Faça login para ver o pedido mínimo' : undefined}
+            >
               <div className="flex items-center gap-2">
                 <span className="text-lg">💵</span>
                 <div>
-                  <div className="text-xs font-bold text-dark">R$ {restaurant.minOrder.toFixed(2)}</div>
+                  {isAuthenticated ? (
+                    <div className="text-xs font-bold text-dark">R$ {restaurant.minOrder.toFixed(2)}</div>
+                  ) : (
+                    <div className="text-xs font-bold text-gray-400">🔒 Login</div>
+                  )}
                 </div>
               </div>
             </div>
@@ -148,36 +159,49 @@ export default function RestaurantPage() {
 
                         <div className="flex flex-col items-end gap-3">
                           <div className="text-right">
-                            {item.isOffer && originalPrice ? (
-                              <>
-                                <div className="text-xs text-dark/50 mb-1">Oferta especial</div>
-                                <p className="text-sm line-through text-gray-500">R$ {originalPrice.toFixed(2)}</p>
-                                <span className="text-3xl font-bold text-primary drop-shadow-sm">
-                                  R$ {displayPrice.toFixed(2)}
-                                </span>
-                              </>
+                            {isAuthenticated ? (
+                              item.isOffer && originalPrice ? (
+                                <>
+                                  <div className="text-xs text-dark/50 mb-1">Oferta especial</div>
+                                  <p className="text-sm line-through text-gray-500">R$ {originalPrice.toFixed(2)}</p>
+                                  <span className="text-3xl font-bold text-primary drop-shadow-sm">
+                                    R$ {displayPrice.toFixed(2)}
+                                  </span>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="text-xs text-dark/50 mb-1">a partir de</div>
+                                  <span className="text-3xl font-bold text-primary drop-shadow-sm">
+                                    R$ {displayPrice.toFixed(2)}
+                                  </span>
+                                </>
+                              )
                             ) : (
-                              <>
-                                <div className="text-xs text-dark/50 mb-1">a partir de</div>
-                                <span className="text-3xl font-bold text-primary drop-shadow-sm">
-                                  R$ {displayPrice.toFixed(2)}
-                                </span>
-                              </>
+                              <button
+                                onClick={() => setShowLoginModal(true)}
+                                className="text-sm text-gray-400 flex items-center gap-1 hover:text-[#C92924] transition-colors"
+                              >
+                                🔒 <span className="underline decoration-dotted">ver preço</span>
+                              </button>
                             )}
                           </div>
                           <button
-                            onClick={() => setExpandedItem(isExpanded ? null : item.id)}
+                            onClick={() => isAuthenticated ? setExpandedItem(isExpanded ? null : item.id) : setShowLoginModal(true)}
                             className="px-6 py-2.5 bg-gradient-to-r from-primary to-primary/90 text-white rounded-lg text-sm font-semibold hover:shadow-lg hover:scale-105 transition-all duration-200 flex items-center gap-2"
                           >
-                            {isExpanded ? (
+                            {isAuthenticated && isExpanded ? (
                               <>
                                 <span>Fechar</span>
                                 <span className="text-lg">↑</span>
                               </>
-                            ) : (
+                            ) : isAuthenticated ? (
                               <>
                                 <span>Ver Detalhes</span>
                                 <span className="text-lg">↓</span>
+                              </>
+                            ) : (
+                              <>
+                                <span>🔒 Ver Detalhes</span>
                               </>
                             )}
                           </button>
@@ -290,6 +314,12 @@ export default function RestaurantPage() {
           );
         })}
       </div>
+
+      <LoginPromptModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        message="Para ver preços e detalhes completos, faça login ou crie uma conta gratuita."
+      />
     </div>
   );
 }

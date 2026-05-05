@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { mockRestaurants } from '../../lib/mockRestaurants';
 import { useAuth } from '../../contexts/AuthContext';
@@ -13,63 +13,78 @@ const categories = [
   { name: 'Doces', icon: '🍰' },
   { name: 'Bebidas', icon: '🥤' },
   { name: 'Saudável', icon: '🥗' },
+  { name: 'Italiana', icon: '🍝' },
   { name: 'Sobremesas', icon: '🍮' },
+  { name: 'Padaria', icon: '🥖' },
 ];
+
+const offerCards = [
+  { emoji: '🍕', title: 'Pizza com 30% OFF', subtitle: 'Toda terça-feira', bg: 'from-red-600 to-orange-500', badge: '30% OFF' },
+  { emoji: '🍔', title: 'Combo Burger + Bebida', subtitle: 'Por apenas R$ 29,90', bg: 'from-yellow-500 to-orange-400', badge: 'COMBO' },
+  { emoji: '🍣', title: 'Rodízio Japonês', subtitle: 'Frete grátis hoje', bg: 'from-purple-600 to-pink-500', badge: 'FRETE GRÁTIS' },
+  { emoji: '🥗', title: 'Bowl Fit Saudável', subtitle: '2 por R$ 35,00', bg: 'from-green-500 to-teal-400', badge: 'LEVE 2' },
+  { emoji: '🍰', title: 'Sobremesas Especiais', subtitle: 'A partir de R$ 12,00', bg: 'from-pink-500 to-rose-400', badge: 'ESPECIAL' },
+  { emoji: '☕', title: 'Café da Manhã', subtitle: 'Entrega em 15 min', bg: 'from-amber-600 to-yellow-500', badge: '15 MIN' },
+];
+
+function CarouselArrow({ direction, onClick }: { direction: 'left' | 'right'; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`absolute top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white shadow-lg border border-gray-100 flex items-center justify-center hover:bg-red-50 hover:border-red-300 transition-all ${direction === 'left' ? '-left-4' : '-right-4'}`}
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-red-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+        {direction === 'left'
+          ? <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+          : <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />}
+      </svg>
+    </button>
+  );
+}
 
 export default function Home() {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [showFilters, setShowFilters] = useState(false);
-  const [expandNearby, setExpandNearby] = useState(false);
-  const [expandAll, setExpandAll] = useState(false);
-  const [expandCategories, setExpandCategories] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Redireciona admin para o dashboard
+  const catRef = useRef<HTMLDivElement>(null);
+  const nearRef = useRef<HTMLDivElement>(null);
+  const offersRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    if (user?.type === 'admin') {
-      navigate('/admin/dashboard');
-    }
+    if (user?.type === 'admin') navigate('/admin/dashboard');
   }, [user, navigate]);
 
-  // LÓGICA DE FILTRO - PASSO 1: Filtra por categoria
-  let filteredByCategory = mockRestaurants;
-  if (selectedCategory && selectedCategory !== '') {
-    filteredByCategory = mockRestaurants.filter(r => r.category === selectedCategory);
-  }
+  const scroll = (ref: React.RefObject<HTMLDivElement | null>, dir: 'left' | 'right') => {
+    if (ref.current) ref.current.scrollBy({ left: dir === 'left' ? -300 : 300, behavior: 'smooth' });
+  };
 
-  // LÓGICA DE FILTRO - PASSO 2: Filtra por busca
-  const filteredRestaurants = filteredByCategory.filter(restaurant => {
-    if (search === '') return true;
-    return (
-      restaurant.name.toLowerCase().includes(search.toLowerCase()) ||
-      restaurant.category.toLowerCase().includes(search.toLowerCase())
-    );
+  const filteredRestaurants = mockRestaurants.filter(r => {
+    const matchSearch = !search ||
+      r.name.toLowerCase().includes(search.toLowerCase()) ||
+      r.category.toLowerCase().includes(search.toLowerCase());
+    const matchCategory = !selectedCategory || r.category === selectedCategory;
+    return matchSearch && matchCategory;
   });
 
-  // Pega apenas os primeiros 8 para a seção "Perto de você"
-  // const nearbyRestaurants = filteredRestaurants.slice(0, 8);
-
+  const nearRestaurants = [...filteredRestaurants].sort((a, b) => a.distance - b.distance);
+  const offerRestaurants = mockRestaurants.filter(r => r.plan === 'diamante' || r.plan === 'ouro');
   const uniqueCategories = ['all', ...new Set(mockRestaurants.map(r => r.category))];
 
   return (
     <div className="w-full" style={{ backgroundColor: '#f8f5ef' }}>
-      {/* Hero Banner com Carrossel */}
+
+      {/* Hero Banner */}
       <div className="relative w-full h-80 overflow-hidden">
         <ImageCarousel />
-        
-        {/* Overlay escuro profundo */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/60"></div>
-        
-        {/* Texto Hero - Elegante e Premium */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white z-10">
-          <p className="text-lg font-medium opacity-95 mb-2">Olá, seja bem-vindo ao</p>
+        <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/60" />
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white z-10 px-4">
+          <p className="text-lg font-medium opacity-95 mb-1">Olá, seja bem-vindo ao</p>
           <h1 className="text-5xl font-bold mb-3" style={{ color: '#A89968' }}>MYMENU</h1>
           <p className="text-base opacity-90">Encontre os melhores restaurantes perto de você</p>
         </div>
-
-        {/* Barra de Busca - Flutuando sobre o banner */}
         <div className="absolute bottom-0 left-0 right-0 pb-8 pt-16 bg-gradient-to-t from-black/50 to-transparent flex items-end z-20">
           <div className="max-w-5xl mx-auto px-6 w-full flex gap-4">
             <div className="flex-1">
@@ -81,12 +96,11 @@ export default function Home() {
               />
             </div>
             <FilterButton
-              activeFiltersCount={0}
+              activeFiltersCount={selectedCategory ? 1 : 0}
               showFilters={showFilters}
               onToggle={() => setShowFilters(!showFilters)}
               onClearFilters={() => setSelectedCategory('')}
             >
-              {/* Filtros simples */}
               <div>
                 <p className="text-xs font-semibold text-gray-800 mb-3">Filtrar por Categoria</p>
                 <div className="flex flex-wrap gap-2">
@@ -94,11 +108,7 @@ export default function Home() {
                     <button
                       key={cat}
                       onClick={() => setSelectedCategory(selectedCategory === cat ? '' : cat)}
-                      className={`px-3 py-1 rounded text-xs transition-all ${
-                        selectedCategory === cat
-                          ? 'bg-red-800 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
+                      className={`px-3 py-1 rounded text-xs transition-all ${selectedCategory === cat ? 'bg-red-800 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
                     >
                       {cat === 'all' ? 'Todas' : cat}
                     </button>
@@ -110,164 +120,171 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Conteúdo Principal */}
-      <div className="max-w-7xl mx-auto px-6 py-16">
-        {/* Melhores Ofertas */}
-        <div className="mb-16">
-          <Link to="/ofertas" className="block">
-            <div className="p-8 flex items-center justify-between text-white shadow-lg hover:shadow-xl transition-shadow rounded-2xl cursor-pointer" style={{ backgroundImage: 'linear-gradient(to right, #660000, #8B6F47)' }}>
-              <div className="flex items-center gap-6">
-                <div className="bg-white/20 p-4 rounded-full">
-                  <span className="text-5xl">🔥</span>
-                </div>
-                <div>
-                  <h2 className="text-3xl font-bold">Melhores Ofertas</h2>
-                  <p className="text-sm opacity-90 mt-1">Restaurantes com os melhores preços perto de você</p>
-                </div>
-              </div>
-              <div className="bg-white hover:bg-gray-100 p-4 rounded-full transition-all shadow-md" style={{ color: '#660000' }}>
-                <span className="text-2xl">→</span>
-              </div>
-            </div>
-          </Link>
-        </div>
+      <div className="max-w-7xl mx-auto px-6 py-10 space-y-14">
 
-        {/* Categorias */}
-        <div className="mb-16">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-3xl font-bold" style={{ color: '#660000' }}>Categorias</h2>
-            {categories.length > 6 && (
-              <button 
-                onClick={() => setExpandCategories(!expandCategories)}
-                className="font-semibold text-sm transition-colors" 
-                style={{ color: '#660000' }}
-              >
-                {expandCategories ? 'Ver menos ←' : 'Ver todas →'}
-              </button>
-            )}
-          </div>
-          <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${expandCategories ? Math.min(categories.length, 8) : 6}, minmax(0, 1fr))` }}>
-            {categories.slice(0, expandCategories ? categories.length : 6).map(cat => (
-              <button
-                key={cat.name}
-                onClick={() => setSelectedCategory(selectedCategory === cat.name ? '' : cat.name)}
-                className={`p-4 rounded-2xl transition-all duration-300 border-2 ${
-                  selectedCategory === cat.name
-                    ? 'shadow-lg bg-red-50'
-                    : 'border-gray-200 bg-white hover:shadow-md shadow-sm'
-                }`}
-                style={selectedCategory === cat.name ? { borderColor: '#660000' } : { borderColor: '#E5E7EB' }}
-              >
-                <div className="text-3xl mb-2">{cat.icon}</div>
-                <p className="text-xs font-semibold text-gray-800 text-center leading-tight">{cat.name}</p>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Perto de você - Mostra restaurantes filtrados por categoria ou busca */}
-        <div className="mb-16">
-          <div className="flex justify-between items-center mb-8">
+        {/* ── OFERTAS ESPECIAIS ── */}
+        <section>
+          <div className="flex items-center gap-3 mb-5">
+            <span className="text-3xl animate-float">🔥</span>
             <div>
-              <h2 className="text-3xl font-bold" style={{ color: '#660000' }}>
-                {selectedCategory && selectedCategory !== '' ? `${selectedCategory}` : 'Perto de você'}
-              </h2>
-              {selectedCategory && selectedCategory !== '' && (
-                <p className="text-sm text-gray-600 mt-2">
-                  Mostrando {filteredRestaurants.length} restaurante(s) de {selectedCategory}
-                </p>
-              )}
+              <h2 className="text-2xl font-bold leading-none" style={{ color: '#660000' }}>Ofertas Especiais</h2>
+              <p className="text-xs text-gray-500 mt-0.5">Promoções imperdíveis de hoje</p>
             </div>
-            {filteredRestaurants.length > 4 && (
-              <button 
-                onClick={() => setExpandNearby(!expandNearby)}
-                className="font-semibold text-sm transition-colors" 
-                style={{ color: '#660000' }}
-              >
-                {expandNearby ? 'Ver menos ←' : 'Ver todas →'}
-              </button>
-            )}
           </div>
-          
-          {filteredRestaurants.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-500">
-                {search 
-                  ? `Nenhum restaurante encontrado para "${search}"` 
-                  : selectedCategory && selectedCategory !== '' 
-                    ? `Nenhum restaurante encontrado em ${selectedCategory}`
-                    : 'Nenhum restaurante encontrado'}
-              </p>
+
+          {/* Banner destaque */}
+          <div className="relative rounded-2xl overflow-hidden mb-5 shadow-xl">
+            <div className="flex items-center justify-between p-6" style={{ background: 'linear-gradient(135deg, #660000 0%, #8B1A1A 50%, #B8860B 100%)' }}>
+              <div className="flex items-center gap-5">
+                <div className="text-6xl animate-float">🎉</div>
+                <div className="text-white">
+                  <div className="inline-block bg-yellow-400 text-red-900 text-xs font-black px-2 py-0.5 rounded-full mb-2 uppercase tracking-wide">Oferta do dia</div>
+                  <h3 className="text-2xl font-black leading-tight">Frete GRÁTIS em todos<br />os pedidos acima de R$ 30</h3>
+                  <p className="text-white/75 text-sm mt-1">Válido até meia-noite • Use o app</p>
+                </div>
+              </div>
+              <div className="hidden md:flex flex-col items-center bg-white/15 rounded-2xl px-6 py-4 border border-white/20">
+                <span className="text-white/70 text-xs font-semibold uppercase tracking-widest">Economize</span>
+                <span className="text-white text-4xl font-black">R$0</span>
+                <span className="text-white/70 text-xs">no frete</span>
+              </div>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-              {filteredRestaurants.slice(0, expandNearby ? filteredRestaurants.length : 4).map((restaurant, index) => (
-                <Link key={restaurant.id} to={`/restaurante/${restaurant.slug}`}>
-                  <div
-                    className="bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-red-200 cursor-pointer"
-                    style={{ animationDelay: `${index * 30}ms` }}
-                  >
-                    <div className="relative h-44 flex items-center justify-center" style={{ backgroundColor: '#660000' }}>
-                      <div className="text-6xl">{restaurant.logo}</div>
-                      {restaurant.plan === 'diamante' && (
-                        <div className="absolute top-3 right-3 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg flex items-center gap-1" style={{ backgroundColor: '#660000' }}>
-                          <span>🏷️</span> Oferta
-                        </div>
-                      )}
-                    </div>
-                    <div className="p-5">
-                      <h3 className="font-bold text-gray-900 mb-2 text-base">{restaurant.name}</h3>
-                      <div className="flex items-center gap-2 mb-3">
-                        <span className="text-yellow-500 text-sm">⭐</span>
-                        <span className="text-sm font-semibold text-gray-800">{restaurant.rating}</span>
-                        <span className="text-xs text-gray-500">({Math.floor(Math.random() * 500 + 50)})</span>
-                      </div>
-                      <p className="text-xs text-gray-600 mb-2">
-                        {restaurant.category} • {restaurant.deliveryTime}
-                      </p>
-                      <p className="text-xs font-semibold" style={{ color: '#c62828' }}>
-                        R$ • R$ • R$ (Faixa de preço)
-                      </p>
-                    </div>
+            <div className="absolute top-0 right-0 w-48 h-full opacity-10 pointer-events-none select-none">
+              <div className="absolute top-3 right-6 text-7xl">🍕</div>
+              <div className="absolute bottom-3 right-20 text-5xl">🍔</div>
+            </div>
+          </div>
+
+          {/* Cards de ofertas — carrossel */}
+          <div className="relative px-4">
+            <CarouselArrow direction="left" onClick={() => scroll(offersRef, 'left')} />
+            <div ref={offersRef} className="flex gap-4 overflow-x-auto scrollbar-hide pb-2">
+              {offerCards.map((offer, i) => (
+                <div
+                  key={i}
+                  className={`flex-shrink-0 w-48 rounded-2xl bg-gradient-to-br ${offer.bg} p-4 text-white shadow-lg cursor-pointer hover:scale-105 hover:shadow-xl transition-all duration-200`}
+                >
+                  <div className="flex justify-between items-start mb-3">
+                    <span className="text-4xl">{offer.emoji}</span>
+                    <span className="bg-white/25 text-white text-[10px] font-black px-2 py-0.5 rounded-full border border-white/30">
+                      {offer.badge}
+                    </span>
                   </div>
-                </Link>
+                  <p className="font-bold text-sm leading-tight">{offer.title}</p>
+                  <p className="text-white/75 text-xs mt-1">{offer.subtitle}</p>
+                </div>
               ))}
             </div>
-          )}
-        </div>
+            <CarouselArrow direction="right" onClick={() => scroll(offersRef, 'right')} />
+          </div>
 
-        {/* Todos os Restaurantes */}
-        <div className="mb-12">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-3xl font-bold" style={{ color: '#660000' }}>
-              {selectedCategory ? `Todos os ${selectedCategory} (${filteredRestaurants.length})` : `Todos os Restaurantes (${filteredRestaurants.length})`}
-            </h2>
-            {filteredRestaurants.length > 6 && (
-              <button 
-                onClick={() => setExpandAll(!expandAll)}
-                className="font-semibold text-sm transition-colors" 
-                style={{ color: '#660000' }}
-              >
-                {expandAll ? 'Ver menos ←' : 'Ver todos →'}
-              </button>
-            )}
-          </div>
-          <div className="space-y-4">
-            {filteredRestaurants.length === 0 ? (
-              <p className="text-center text-gray-500 py-8">Nenhum restaurante encontrado</p>
-            ) : (
-              filteredRestaurants.slice(0, expandAll ? filteredRestaurants.length : 6).map((restaurant, index) => (
-                <div
-                  key={restaurant.id}
-                  className="animate-slide-in-up"
-                  style={{ animationDelay: `${index * 30}ms` }}
-                >
-                  <RestaurantCard restaurant={restaurant} />
+          {/* Restaurantes em oferta */}
+          <div className="mt-5 grid grid-cols-2 md:grid-cols-4 gap-3">
+            {offerRestaurants.slice(0, 4).map((r) => (
+              <Link key={r.id} to={`/restaurante/${r.slug}`}>
+                <div className="relative bg-white rounded-xl overflow-hidden shadow hover:shadow-md transition-all cursor-pointer group">
+                  <div className="h-24 flex items-center justify-center text-5xl group-hover:scale-110 transition-transform duration-300" style={{ background: 'linear-gradient(135deg, #660000, #8B1A1A)' }}>
+                    {r.logo}
+                  </div>
+                  <div className="absolute top-2 left-2 bg-yellow-400 text-red-900 text-[10px] font-black px-1.5 py-0.5 rounded-full">
+                    {r.plan === 'diamante' ? '💎 TOP' : '⭐ OFERTA'}
+                  </div>
+                  <div className="p-3">
+                    <p className="font-semibold text-gray-800 text-sm truncate">{r.name}</p>
+                    <p className="text-xs text-gray-500">{r.deliveryTime} • {r.distance}km</p>
+                  </div>
                 </div>
-              ))
-            )}
+              </Link>
+            ))}
           </div>
-        </div>
+        </section>
+
+        {/* ── CATEGORIAS ── */}
+        <section>
+          <h2 className="text-2xl font-bold mb-5" style={{ color: '#660000' }}>Categorias</h2>
+          <div className="relative px-4">
+            <CarouselArrow direction="left" onClick={() => scroll(catRef, 'left')} />
+            <div ref={catRef} className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
+              {categories.map((cat) => (
+                <button
+                  key={cat.name}
+                  onClick={() => setSelectedCategory(selectedCategory === cat.name ? '' : cat.name)}
+                  className={`flex-shrink-0 flex flex-col items-center gap-2 px-5 py-4 rounded-2xl border-2 transition-all duration-200 hover:scale-105 bg-white ${
+                    selectedCategory === cat.name
+                      ? 'shadow-md'
+                      : 'border-gray-200 hover:border-red-300 hover:shadow-sm'
+                  }`}
+                  style={selectedCategory === cat.name ? { borderColor: '#660000', backgroundColor: '#fff5f5' } : {}}
+                >
+                  <span className="text-3xl">{cat.icon}</span>
+                  <span className="text-xs font-semibold text-gray-700 whitespace-nowrap">{cat.name}</span>
+                </button>
+              ))}
+            </div>
+            <CarouselArrow direction="right" onClick={() => scroll(catRef, 'right')} />
+          </div>
+        </section>
+
+        {/* ── PERTO DE VOCÊ ── */}
+        <section>
+          <div className="flex items-center gap-3 mb-5">
+            <h2 className="text-2xl font-bold" style={{ color: '#660000' }}>
+              {selectedCategory || 'Perto de você'}
+            </h2>
+            <span className="text-xs bg-red-100 font-semibold px-2 py-0.5 rounded-full" style={{ color: '#660000' }}>
+              📍 {nearRestaurants.length} locais
+            </span>
+          </div>
+
+          {nearRestaurants.length === 0 ? (
+            <p className="text-center text-gray-500 py-8">Nenhum restaurante encontrado</p>
+          ) : (
+            <div className="relative px-4">
+              <CarouselArrow direction="left" onClick={() => scroll(nearRef, 'left')} />
+              <div ref={nearRef} className="flex gap-4 overflow-x-auto scrollbar-hide pb-2">
+                {nearRestaurants.map((r) => (
+                  <Link key={r.id} to={`/restaurante/${r.slug}`} className="flex-shrink-0 w-52">
+                    <div className="bg-white rounded-2xl overflow-hidden shadow hover:shadow-lg transition-all duration-200 cursor-pointer group">
+                      <div className="relative h-36 flex items-center justify-center overflow-hidden" style={{ background: 'linear-gradient(135deg, #660000, #8B1A1A)' }}>
+                        <span className="text-6xl group-hover:scale-110 transition-transform duration-300">{r.logo}</span>
+                        {r.plan === 'diamante' && (
+                          <div className="absolute top-2 right-2 bg-yellow-400 text-red-900 px-2 py-0.5 rounded-full text-[10px] font-black">💎 TOP</div>
+                        )}
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 to-transparent h-10" />
+                        <div className="absolute bottom-2 left-2 flex items-center gap-1">
+                          <span className="text-yellow-400 text-xs">⭐</span>
+                          <span className="text-white text-xs font-bold">{r.rating}</span>
+                        </div>
+                      </div>
+                      <div className="p-3">
+                        <p className="font-semibold text-gray-800 text-sm truncate">{r.name}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{r.category} • {r.deliveryTime}</p>
+                        <p className="text-xs font-medium mt-1" style={{ color: '#660000' }}>📍 {r.distance}km</p>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+              <CarouselArrow direction="right" onClick={() => scroll(nearRef, 'right')} />
+            </div>
+          )}
+        </section>
+
+        {/* ── TODOS OS RESTAURANTES ── */}
+        <section>
+          <h2 className="text-2xl font-bold mb-5" style={{ color: '#660000' }}>
+            {selectedCategory ? `Todos os ${selectedCategory}` : 'Todos os Restaurantes'}
+            <span className="ml-2 text-base font-normal text-gray-400">({filteredRestaurants.length})</span>
+          </h2>
+          <div className="space-y-3">
+            {filteredRestaurants.map((r, i) => (
+              <div key={r.id} className="animate-slide-in-up" style={{ animationDelay: `${i * 30}ms` }}>
+                <RestaurantCard restaurant={r} />
+              </div>
+            ))}
+          </div>
+        </section>
+
       </div>
     </div>
   );

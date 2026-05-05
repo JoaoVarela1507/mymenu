@@ -7,17 +7,45 @@ import {
   signInWithPopup,
   type User as FirebaseUser,
 } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import type { AuthUser } from '../types/auth';
 
-export async function apiLogin(email: string, password: string): Promise<AuthUser | null> {
+export async function apiLogin(email: string, password: string): Promise<AuthUser | null | 'choose_profile'> {
   try {
     const { user } = await signInWithEmailAndPassword(auth, email, password);
     return await getFirestoreUser(user);
   } catch {
     return null;
   }
+}
+
+export async function apiLoginWithProfile(email: string, password: string, profile: 'consumer' | 'admin'): Promise<AuthUser | null> {
+  try {
+    // Usuário já está autenticado pelo Firebase, só pega o uid atual
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      // Se não estiver autenticado ainda, faz login
+      const { user } = await signInWithEmailAndPassword(auth, email, password);
+      const snap = await getDoc(doc(db, 'users', user.uid));
+      if (!snap.exists()) return null;
+      const data = snap.data();
+      return { id: user.uid, name: data.name, email: data.email, type: profile };
+    }
+    const snap = await getDoc(doc(db, 'users', currentUser.uid));
+    if (!snap.exists()) return null;
+    const data = snap.data();
+    return { id: currentUser.uid, name: data.name, email: data.email, type: profile };
+  } catch {
+    return null;
+  }
+}
+
+export async function checkAvailableProfiles(uid: string): Promise<('consumer' | 'admin')[]> {
+  const profiles: ('consumer' | 'admin')[] = ['consumer'];
+  const restSnap = await getDoc(doc(db, 'userRestaurant', uid));
+  if (restSnap.exists()) profiles.push('admin');
+  return profiles;
 }
 
 export async function apiRegister(payload: {
@@ -40,6 +68,56 @@ export async function apiRegister(payload: {
   } catch (err: any) {
     const msg = firebaseErrorMessage(err.code);
     return { success: false, message: msg };
+  }
+}
+
+export async function apiRegisterRestaurant(payload: {
+  name: string;
+  email: string;
+  password: string;
+  phone: string;
+  restaurantName: string;
+  cnpj: string;
+  restaurantPhone: string;
+  category: string;
+  address: string;
+  city: string;
+  state: string;
+  cep: string;
+  description: string;
+}): Promise<{ success: boolean; message: string }> {
+  try {
+    const res = await fetch('http://localhost:8000/restaurant/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: payload.name,
+        email: payload.email,
+        password: payload.password,
+        phone: payload.phone,
+        restaurant_name: payload.restaurantName,
+        cnpj: payload.cnpj,
+        restaurant_phone: payload.restaurantPhone,
+        category: payload.category,
+        address: payload.address,
+        city: payload.city,
+        state: payload.state,
+        cep: payload.cep,
+        description: payload.description,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      console.error('[Register] Backend erro:', data);
+      return { success: false, message: data.detail ?? 'Erro ao criar conta.' };
+    }
+
+    return { success: true, message: data.message };
+  } catch (err: any) {
+    console.error('[Register] Erro de rede:', err);
+    return { success: false, message: 'Erro de conexão com o servidor.' };
   }
 }
 
@@ -106,7 +184,7 @@ async function getFirestoreUser(firebaseUser: FirebaseUser): Promise<AuthUser | 
 
 function firebaseErrorMessage(code: string): string {
   switch (code) {
-    case 'auth/email-already-in-use': return 'Este email já está cadastrado.';
+    case 'auth/email-already-in-use': return 'Este email já possui uma conta. Use um email diferente para o cadastro do restaurante.';
     case 'auth/invalid-email': return 'Email inválido.';
     case 'auth/weak-password': return 'Senha muito fraca. Use pelo menos 6 caracteres.';
     case 'auth/user-not-found':

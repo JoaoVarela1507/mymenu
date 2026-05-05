@@ -14,5 +14,6 @@ export interface MenuItem {
   icon: string;
   path: string;
   allowedRoles: UserRole[];
+  requiresAuth?: boolean;
   submenu?: { id: string; label: string; path: string }[];
 }

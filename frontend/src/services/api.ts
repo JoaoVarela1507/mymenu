@@ -1,7 +1,7 @@
 import { mockOrders } from '../lib/mockData';
 import { mockMenuItems } from '../lib/mockMenu';
 import type { OrderStatus } from '../types';
-import { apiRegister, getToken } from './authService';
+import { apiRegister, apiRegisterRestaurant, getToken } from './authService';
 
 // Types
 interface ApiResponse<T = any> {
@@ -20,16 +20,22 @@ interface RegisterConsumerData {
 }
 
 interface RegisterRestaurantData {
+  // Restaurante
   restaurantName: string;
   cnpj: string;
-  phone: string;
-  address: string;
+  restaurantPhone: string;
   category: string;
+  address: string;
+  city: string;
+  state: string;
+  cep: string;
+  description: string;
+  // Admin
   name: string;
   email: string;
   password: string;
   confirmPassword: string;
-  documentFile?: File;
+  phone: string;
 }
 
 
@@ -74,10 +80,23 @@ export const authService = {
   },
 
   registerRestaurant: async (data: RegisterRestaurantData): Promise<ApiResponse> => {
-    if (data.cnpj.length < 14) {
-      return { success: false, message: 'CNPJ inválido.' };
-    }
-    const result = await apiRegister({ name: data.name, email: data.email, password: data.password, role: 'admin' });
+    const cnpjDigits = data.cnpj.replace(/\D/g, '');
+    if (cnpjDigits.length !== 14) return { success: false, message: 'CNPJ deve ter 14 dígitos.' };
+    const result = await apiRegisterRestaurant({
+      name: data.name,
+      email: data.email,
+      password: data.password,
+      phone: data.phone,
+      restaurantName: data.restaurantName,
+      cnpj: cnpjDigits,
+      restaurantPhone: data.restaurantPhone.replace(/\D/g, ''),
+      category: data.category,
+      address: data.address,
+      city: data.city,
+      state: data.state,
+      cep: data.cep.replace(/\D/g, ''),
+      description: data.description,
+    });
     return { success: result.success, message: result.message };
   },
 
