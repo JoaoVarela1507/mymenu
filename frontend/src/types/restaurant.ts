@@ -1,5 +1,4 @@
 export type RestaurantPlan = 'diamante' | 'ouro' | 'prata' | 'basico';
-export type Platform = 'mymenu' | 'ifood' | 'ubereats' | 'rappi';
 
 export interface Restaurant {
   id: string;
@@ -13,14 +12,20 @@ export interface Restaurant {
   isOpen: boolean;
   deliveryTime: string;
   minOrder: number;
-  headerColor?: string; // Cor personalizável do header (hex)
+  headerColor?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  description?: string;
+  openTime?: string;
+  closeTime?: string;
 }
 
 export interface MenuCategory {
   id: string;
   name: string;
   order: number;
-  restaurantId?: string; // Se undefined, é global; se definido, é específico do restaurante
+  restaurantId?: string;
 }
 
 export interface MenuItem {
@@ -31,22 +36,10 @@ export interface MenuItem {
   ingredients?: string;
   image?: string;
   categoryId: string;
-  prices: {
-    mymenu?: number;
-    ifood?: number;
-    ubereats?: number;
-    rappi?: number;
-  };
+  price: number;
   exclusive?: 'delivery' | 'presencial';
   available: boolean;
   allergens?: ('gluten' | 'dairy' | 'eggs' | 'nuts' | 'soy' | 'fish' | 'shellfish')[];
   isOffer?: boolean;
   offerPrice?: number;
-}
-
-export interface PriceComparison {
-  platform: Platform;
-  price: number;
-  isCheapest: boolean;
-  available: boolean;
 }

@@ -2,32 +2,20 @@ import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { Card, ImageCarousel } from '../../components/shared';
 import { useAuth } from '../../contexts/AuthContext';
-import { mockRestaurants } from '../../lib/mockRestaurants';
+import { getRestaurantByOwnerId } from '../../lib/firestoreService';
 
 export default function Dashboard() {
   const { user } = useAuth();
-  
-  // Restaurantes cadastrados do admin (apenas 3 do mock)
-  const adminRestaurants = mockRestaurants.slice(0, 3);
-  
-  // Carregar do localStorage ao montar, senão usar o primeiro restaurante do admin
-  const [selectedRestaurantId, setSelectedRestaurantId] = useState(() => {
-    const saved = localStorage.getItem('selectedRestaurantId');
-    if (saved && adminRestaurants.find(r => r.id === saved)) {
-      return saved;
-    }
-    return adminRestaurants[0]?.id || user?.restaurantId;
-  });
+  const [restaurant, setRestaurant] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Salvar no localStorage sempre que muda
   useEffect(() => {
-    if (selectedRestaurantId) {
-      localStorage.setItem('selectedRestaurantId', selectedRestaurantId);
-    }
-  }, [selectedRestaurantId]);
-  
-  // Obter dados do restaurante do admin
-  const restaurant = adminRestaurants.find(r => r.id === selectedRestaurantId);
+    if (!user?.id) return;
+    getRestaurantByOwnerId(user.id).then(rest => {
+      setRestaurant(rest);
+      setLoading(false);
+    });
+  }, [user?.id]);
 
   return (
     <div className="w-full min-h-screen" style={{ backgroundColor: '#f8f5ef' }}>
@@ -38,7 +26,7 @@ export default function Dashboard() {
 
         <div className="absolute inset-0 flex flex-col justify-between z-10">
           <div className="max-w-7xl mx-auto w-full px-8 pt-8">
-            <div className="flex items-center justify-between text-white">
+            <div className="flex items-center text-white">
               <div>
                 <div className="flex items-center gap-4 mb-3">
                   <img
@@ -50,58 +38,29 @@ export default function Dashboard() {
                   <div>
                     <p className="text-xs uppercase tracking-[0.25em] opacity-80 mb-1">Painel administrativo</p>
                     <p className="text-sm md:text-base text-white/90 font-medium">
-                      Gerencie pedidos, cardápio e canais do restaurante ativo
+                      Gerencie seu restaurante no MyMenu
                     </p>
                   </div>
                 </div>
                 <div className="inline-flex items-center gap-2 mt-2 bg-white/15 backdrop-blur-sm border border-white/20 rounded-full px-3 py-1.5 shadow-lg">
-                  <span className="text-[11px] uppercase tracking-[0.18em] text-white/70 font-semibold">Restaurante atual</span>
+                  <span className="text-[11px] uppercase tracking-[0.18em] text-white/70 font-semibold">Restaurante</span>
                   <span className="text-base md:text-lg font-bold text-white drop-shadow-sm">
-                    {restaurant?.name || 'Seu Restaurante'}
+                    {loading ? '...' : (restaurant?.restaurantName || 'Seu Restaurante')}
                   </span>
                 </div>
-              </div>
-
-              <div className="hidden md:flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-2xl px-4 py-3 border border-white/20">
-                <span className="text-sm font-medium text-white/90">Mudar restaurante:</span>
-                <select
-                  value={selectedRestaurantId}
-                  onChange={(e) => setSelectedRestaurantId(e.target.value)}
-                  className="px-3 py-2 rounded-lg text-sm font-medium bg-white cursor-pointer hover:border-gray-400 text-gray-800"
-                >
-                  {adminRestaurants.map(rest => (
-                    <option key={rest.id} value={rest.id}>
-                      {rest.logo} {rest.name}
-                    </option>
-                  ))}
-                </select>
               </div>
             </div>
           </div>
 
           <div className="max-w-7xl mx-auto w-full px-8 pb-8">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-white">
+            <div className="grid grid-cols-2 gap-4 text-white max-w-sm">
               <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-3.5 border border-white/15">
-                <p className="text-xs uppercase tracking-wide text-white/70 mb-1">Restaurante ativo</p>
-                <p className="text-base font-bold">{restaurant?.name}</p>
+                <p className="text-xs uppercase tracking-wide text-white/70 mb-1">Categoria</p>
+                <p className="text-base font-bold">{restaurant?.category || '—'}</p>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-3.5 border border-white/15">
                 <p className="text-xs uppercase tracking-wide text-white/70 mb-1">Plano</p>
-                <p className="text-base font-bold capitalize">{restaurant?.plan}</p>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-3.5 border border-white/15 md:hidden">
-                <label className="block text-xs uppercase tracking-wide text-white/70 mb-2">Mudar restaurante</label>
-                <select
-                  value={selectedRestaurantId}
-                  onChange={(e) => setSelectedRestaurantId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg text-sm font-medium bg-white cursor-pointer text-gray-800"
-                >
-                  {adminRestaurants.map(rest => (
-                    <option key={rest.id} value={rest.id}>
-                      {rest.logo} {rest.name}
-                    </option>
-                  ))}
-                </select>
+                <p className="text-base font-bold capitalize">{restaurant?.plan || 'básico'}</p>
               </div>
             </div>
           </div>
@@ -110,119 +69,48 @@ export default function Dashboard() {
 
       <div className="max-w-7xl mx-auto px-8 py-12">
         {/* Informações do Restaurante */}
-        {restaurant && (
-          <Card className="mb-12">
-            <div className="flex items-start justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-800 mb-4">Informações do Restaurante</h2>
-                <div className="grid grid-cols-2 gap-6">
+        <Card className="mb-12">
+          <div className="flex items-start justify-between gap-6">
+            <div className="flex-1">
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">Informações do Restaurante</h2>
+              {loading ? (
+                <p className="text-gray-400">Carregando...</p>
+              ) : restaurant ? (
+                <div className="grid grid-cols-2 gap-x-8 gap-y-4">
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">Nome</p>
-                    <p className="text-lg font-semibold text-gray-800">{restaurant.name}</p>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Nome</p>
+                    <p className="font-semibold text-gray-800">{restaurant.restaurantName}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">Categoria</p>
-                    <p className="text-lg font-semibold text-gray-800">{restaurant.category}</p>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Categoria</p>
+                    <p className="font-semibold text-gray-800">{restaurant.category || '—'}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">Distância</p>
-                    <p className="text-lg font-semibold text-gray-800">{restaurant.distance} km</p>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Cidade</p>
+                    <p className="font-semibold text-gray-800">{restaurant.city || '—'}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">Tempo de Entrega</p>
-                    <p className="text-lg font-semibold text-gray-800">{restaurant.deliveryTime}</p>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Plano</p>
+                    <p className="font-semibold text-gray-800 capitalize">{restaurant.plan || 'básico'}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">Avaliação</p>
-                    <p className="text-lg font-semibold text-gray-800">⭐ {restaurant.rating}</p>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Proprietário</p>
+                    <p className="font-semibold text-gray-800">{restaurant.ownerName || user?.name}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">Status</p>
-                    <p className="text-lg font-semibold" style={{ color: restaurant.isOpen ? '#22c55e' : '#ef4444' }}>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Status</p>
+                    <p className="font-semibold" style={{ color: restaurant.isOpen ? '#22c55e' : '#ef4444' }}>
                       {restaurant.isOpen ? '🟢 Aberto' : '🔴 Fechado'}
                     </p>
                   </div>
                 </div>
-              </div>
-              <div className="text-8xl">{restaurant.logo}</div>
+              ) : (
+                <p className="text-gray-500">Restaurante não encontrado. Verifique seu cadastro.</p>
+              )}
             </div>
-          </Card>
-        )}
-
-        {/* Canais de Venda */}
-        <Card className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">🚀 Canais de Venda Integrados</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="flex flex-col items-center gap-2 p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <span className="text-3xl">🍔</span>
-              <p className="text-sm font-medium text-gray-700 text-center">iFood</p>
-              <p className="text-xs text-green-600 font-semibold">✓ Ativo</p>
-            </div>
-            <div className="flex flex-col items-center gap-2 p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <span className="text-3xl">🚗</span>
-              <p className="text-sm font-medium text-gray-700 text-center">Uber Eats</p>
-              <p className="text-xs text-green-600 font-semibold">✓ Ativo</p>
-            </div>
-            <div className="flex flex-col items-center gap-2 p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <span className="text-3xl">📦</span>
-              <p className="text-sm font-medium text-gray-700 text-center">Rappi</p>
-              <p className="text-xs text-gray-500 font-semibold">○ Inativo</p>
-            </div>
-            <div className="flex flex-col items-center gap-2 p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <span className="text-3xl">🛵</span>
-              <p className="text-sm font-medium text-gray-700 text-center">99Food</p>
-              <p className="text-xs text-green-600 font-semibold">✓ Ativo</p>
-            </div>
+            <div className="text-7xl flex-shrink-0">{restaurant?.logo || '🍽️'}</div>
           </div>
-          <p className="text-xs text-gray-600 mt-4">ℹ️ Gerencie seus canais de venda em <a href="/admin/settings/integracoes" className="font-semibold" style={{ color: '#660000' }}>Configurações &gt; Integrações</a></p>
         </Card>
-
-        {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          <Card>
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-2 font-medium">Pedidos Hoje</p>
-                <p className="text-4xl font-bold" style={{ color: '#660000' }}>24</p>
-                <p className="text-xs text-green-600 mt-2">+12% vs. ontem</p>
-              </div>
-              <span className="text-3xl">📦</span>
-            </div>
-          </Card>
-
-          <Card>
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-2 font-medium">Faturamento</p>
-                <p className="text-4xl font-bold" style={{ color: '#660000' }}>R$ 1.240</p>
-                <p className="text-xs text-green-600 mt-2">+8% vs. ontem</p>
-              </div>
-              <span className="text-3xl">💰</span>
-            </div>
-          </Card>
-
-          <Card>
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-2 font-medium">Ticket Médio</p>
-                <p className="text-4xl font-bold" style={{ color: '#660000' }}>R$ 51,67</p>
-                <p className="text-xs text-gray-500 mt-2">Estável</p>
-              </div>
-              <span className="text-3xl">💳</span>
-            </div>
-          </Card>
-
-          <Card>
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-2 font-medium">Avaliação</p>
-                <p className="text-4xl font-bold" style={{ color: '#660000' }}>{restaurant?.rating}</p>
-                <p className="text-xs text-gray-500 mt-2">⭐ Excelente</p>
-              </div>
-              <span className="text-3xl">👍</span>
-            </div>
-          </Card>
-        </div>
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
@@ -243,8 +131,20 @@ export default function Dashboard() {
               <div className="flex items-center gap-4">
                 <div className="text-5xl">📲</div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-800 mb-1">Pedidos Recebidos</h3>
-                  <p className="text-sm text-gray-600">Visualizar e gerenciar pedidos em tempo real</p>
+                  <h3 className="text-lg font-bold text-gray-800 mb-1">Central de Pedidos</h3>
+                  <p className="text-sm text-gray-600">Visualizar e gerenciar pedidos das mesas</p>
+                </div>
+              </div>
+            </Card>
+          </Link>
+
+          <Link to="/admin/promotions">
+            <Card className="h-full cursor-pointer hover:shadow-lg transition-shadow">
+              <div className="flex items-center gap-4">
+                <div className="text-5xl">🎁</div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-800 mb-1">Promoções</h3>
+                  <p className="text-sm text-gray-600">Crie e gerencie promoções do seu restaurante</p>
                 </div>
               </div>
             </Card>
@@ -255,44 +155,30 @@ export default function Dashboard() {
               <div className="flex items-center gap-4">
                 <div className="text-5xl">⚙️</div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-800 mb-1">Configurações da Loja</h3>
-                  <p className="text-sm text-gray-600">Editar horário, fotos e endereço</p>
-                </div>
-              </div>
-            </Card>
-          </Link>
-
-          <Link to="/admin/reports">
-            <Card className="h-full cursor-pointer hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-4">
-                <div className="text-5xl">📊</div>
-                <div>
-                  <h3 className="text-lg font-bold text-gray-800 mb-1">Relatórios</h3>
-                  <p className="text-sm text-gray-600">Análises detalhadas de vendas e performance</p>
+                  <h3 className="text-lg font-bold text-gray-800 mb-1">Configurações</h3>
+                  <p className="text-sm text-gray-600">Gerenciar plano e configurações da conta</p>
                 </div>
               </div>
             </Card>
           </Link>
         </div>
 
-        {/* Recent Orders */}
+        {/* Relatórios Em Breve */}
         <Card>
-          <h2 className="text-xl font-bold text-gray-800 mb-6 pb-4 border-b border-gray-200" style={{ borderBottomColor: '#660000' }}>
-            Pedidos Recentes
-          </h2>
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center justify-between pb-4 border-b border-gray-100 last:border-b-0">
-                <div>
-                  <p className="font-semibold text-gray-800">Pedido #{1000 + i}</p>
-                  <p className="text-sm text-gray-600">Cliente: João Silva</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold" style={{ color: '#660000' }}>R$ 65,90</p>
-                  <p className="text-xs text-green-600 font-medium">✓ Confirmado</p>
-                </div>
-              </div>
-            ))}
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="text-5xl">📊</div>
+            <div className="flex-1">
+              <h3 className="text-lg font-bold text-gray-800 mb-1">Relatórios</h3>
+              <p className="text-sm text-gray-600">
+                Em breve: importe sua planilha Excel para visualizar relatórios detalhados de vendas e performance.
+              </p>
+            </div>
+            <Link
+              to="/admin/reports"
+              className="px-4 py-2 border-2 border-[#660000] text-[#660000] rounded-lg text-sm font-semibold hover:bg-[#660000] hover:text-white transition-colors whitespace-nowrap"
+            >
+              Ver Relatórios
+            </Link>
           </div>
         </Card>
       </div>

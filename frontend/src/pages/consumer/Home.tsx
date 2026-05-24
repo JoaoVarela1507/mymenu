@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { mockRestaurants } from '../../lib/mockRestaurants';
+import { getRestaurants } from '../../lib/firestoreService';
+import type { Restaurant } from '../../types/restaurant';
 import { useAuth } from '../../contexts/AuthContext';
 import RestaurantCard from '../../components/consumer/RestaurantCard';
 import { Input, FilterButton, ImageCarousel } from '../../components/shared';
@@ -46,6 +47,8 @@ export default function Home() {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [showFilters, setShowFilters] = useState(false);
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [loadingRestaurants, setLoadingRestaurants] = useState(true);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -57,11 +60,17 @@ export default function Home() {
     if (user?.type === 'admin') navigate('/admin/dashboard');
   }, [user, navigate]);
 
+  useEffect(() => {
+    getRestaurants()
+      .then(setRestaurants)
+      .finally(() => setLoadingRestaurants(false));
+  }, []);
+
   const scroll = (ref: React.RefObject<HTMLDivElement | null>, dir: 'left' | 'right') => {
     if (ref.current) ref.current.scrollBy({ left: dir === 'left' ? -300 : 300, behavior: 'smooth' });
   };
 
-  const filteredRestaurants = mockRestaurants.filter(r => {
+  const filteredRestaurants = restaurants.filter(r => {
     const matchSearch = !search ||
       r.name.toLowerCase().includes(search.toLowerCase()) ||
       r.category.toLowerCase().includes(search.toLowerCase());
@@ -70,8 +79,8 @@ export default function Home() {
   });
 
   const nearRestaurants = [...filteredRestaurants].sort((a, b) => a.distance - b.distance);
-  const offerRestaurants = mockRestaurants.filter(r => r.plan === 'diamante' || r.plan === 'ouro');
-  const uniqueCategories = ['all', ...new Set(mockRestaurants.map(r => r.category))];
+  const offerRestaurants = restaurants.filter(r => r.plan === 'diamante' || r.plan === 'ouro');
+  const uniqueCategories = ['all', ...new Set(restaurants.map(r => r.category).filter(Boolean))];
 
   return (
     <div className="w-full" style={{ backgroundColor: '#f8f5ef' }}>
@@ -191,7 +200,7 @@ export default function Home() {
                   </div>
                   <div className="p-3">
                     <p className="font-semibold text-gray-800 text-sm truncate">{r.name}</p>
-                    <p className="text-xs text-gray-500">{r.deliveryTime} • {r.distance}km</p>
+                    <p className="text-xs text-gray-500">{r.openTime && r.closeTime ? `${r.openTime}–${r.closeTime}` : r.deliveryTime} • {r.city || r.address || '—'}</p>
                   </div>
                 </div>
               </Link>
@@ -236,8 +245,10 @@ export default function Home() {
             </span>
           </div>
 
-          {nearRestaurants.length === 0 ? (
-            <p className="text-center text-gray-500 py-8">Nenhum restaurante encontrado</p>
+          {loadingRestaurants ? (
+            <p className="text-center text-gray-400 py-8">Carregando restaurantes...</p>
+          ) : nearRestaurants.length === 0 ? (
+            <p className="text-center text-gray-500 py-8">Nenhum restaurante cadastrado ainda</p>
           ) : (
             <div className="relative px-4">
               <CarouselArrow direction="left" onClick={() => scroll(nearRef, 'left')} />
@@ -258,8 +269,8 @@ export default function Home() {
                       </div>
                       <div className="p-3">
                         <p className="font-semibold text-gray-800 text-sm truncate">{r.name}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">{r.category} • {r.deliveryTime}</p>
-                        <p className="text-xs font-medium mt-1" style={{ color: '#660000' }}>📍 {r.distance}km</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{r.category} • {r.openTime && r.closeTime ? `${r.openTime}–${r.closeTime}` : r.deliveryTime}</p>
+                        <p className="text-xs font-medium mt-1" style={{ color: '#660000' }}>📍 {r.city || r.address || '—'}</p>
                       </div>
                     </div>
                   </Link>

@@ -6,7 +6,7 @@ import { menuItems } from '../../lib/menuConfig';
 export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, loginWithProfile, hasMultipleProfiles } = useAuth();
   const [isExpanded] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -93,6 +93,23 @@ export default function Sidebar() {
                 <p className="text-white/50 text-[10px] truncate">{user.email}</p>
               </div>
             </div>
+            {hasMultipleProfiles && (
+              <button
+                onClick={async () => {
+                  const target = user!.type === 'admin' ? 'consumer' : 'admin';
+                  await loginWithProfile(target);
+                  navigate(target === 'admin' ? '/admin/dashboard' : '/');
+                  setMobileOpen(false);
+                }}
+                title={user?.type === 'admin' ? 'Ir para área do consumidor' : 'Ir para área do restaurante'}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-all text-sm"
+              >
+                <span className="text-lg flex-shrink-0">🔄</span>
+                <span className={`whitespace-nowrap transition-all duration-300 ${isExpanded || mobileOpen ? 'opacity-100 max-w-xs' : 'opacity-0 max-w-0'}`}>
+                  {user?.type === 'admin' ? 'Área do Cliente' : 'Área do Restaurante'}
+                </span>
+              </button>
+            )}
             <button
               onClick={() => { logout(); setMobileOpen(false); }}
               title="Sair"

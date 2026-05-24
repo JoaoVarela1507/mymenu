@@ -1,57 +1,103 @@
-import { useState } from 'react';
-import type { Order, OrderStatus, OrderSource } from '../../types';
-import { mockOrders } from '../../lib/mockData';
+import { useState, useEffect } from 'react';
+import type { Order, OrderStatus } from '../../types';
+import { useAuth } from '../../contexts/AuthContext';
+import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
+import type { TableOrder } from '../../lib/firestoreService';
 import OrderCard from '../../components/admin/OrderCard';
 import { EmptyState, PageHeader, FilterButton } from '../../components/shared';
 
 type SortOption = 'newest' | 'oldest';
 
+const TO_DISPLAY: Record<string, OrderStatus> = {
+  pending: 'novo',
+  aceito: 'aceito',
+  preparing: 'preparo',
+  delivered: 'pronto',
+  finalizado: 'finalizado',
+  cancelled: 'cancelado',
+};
+
+const TO_FIRESTORE: Record<OrderStatus, TableOrder['status']> = {
+  novo: 'pending',
+  aceito: 'aceito',
+  preparo: 'preparing',
+  pronto: 'delivered',
+  finalizado: 'finalizado',
+  cancelado: 'cancelled',
+};
+
+function mapToOrder(t: TableOrder, index: number): Order {
+  let time = t.createdAt;
+  try {
+    const d = new Date(t.createdAt);
+    if (!isNaN(d.getTime())) {
+      time = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    }
+  } catch (_) {}
+
+  return {
+    id: t.id,
+    orderNumber: `#${String(index + 1).padStart(3, '0')}`,
+    tableNumber: 0,
+    tableName: t.tableName,
+    tableCode: t.tableCode,
+    status: TO_DISPLAY[t.status] ?? 'novo',
+    items: t.items.map(i => ({ name: i.name, quantity: i.quantity, price: i.price })),
+    total: t.total,
+    createdAt: time,
+  };
+}
+
 export default function OrdersCenter() {
-  const [orders, setOrders] = useState<Order[]>(mockOrders);
+  const { user } = useAuth();
+  const [tableOrders, setTableOrders] = useState<TableOrder[]>([]);
   const [searchId, setSearchId] = useState('');
   const [filter, setFilter] = useState<OrderStatus | 'all'>('all');
-  const [sourceFilter, setSourceFilter] = useState<OrderSource | 'all'>('all');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [showFilters, setShowFilters] = useState(false);
 
-  const clearFilters = () => {
-    setFilter('all');
-    setSourceFilter('all');
-    setSortBy('newest');
+  const restaurantId = user?.id ?? '';
+
+  useEffect(() => {
+    if (!restaurantId) return;
+    const q = query(collection(db, 'tableOrders'), where('restaurantId', '==', restaurantId));
+    const unsub = onSnapshot(q, snap => {
+      const orders = snap.docs
+        .map(d => ({ id: d.id, ...d.data() } as TableOrder))
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      setTableOrders(orders);
+    });
+    return unsub;
+  }, [restaurantId]);
+
+  const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
+    await updateDoc(doc(db, 'tableOrders', orderId), { status: TO_FIRESTORE[newStatus] });
   };
 
-  const handleStatusChange = (orderId: string, newStatus: OrderStatus) => {
-    setOrders(orders.map(order => 
-      order.id === orderId ? { ...order, status: newStatus } : order
-    ));
-  };
+  // Stable sequential numbers based on creation order (oldest = #001)
+  const chronological = [...tableOrders].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const indexMap = new Map(chronological.map((o, i) => [o.id, i]));
+  const orders: Order[] = tableOrders.map(t => mapToOrder(t, indexMap.get(t.id) ?? 0));
 
-  // Filtrar e ordenar pedidos
-  const filteredAndSortedOrders = orders
+  const clearFilters = () => { setFilter('all'); setSortBy('newest'); };
+
+  const filteredOrders = orders
     .filter(order => {
-      // Filtro por ID
-      if (searchId && !order.orderNumber.toLowerCase().includes(searchId.toLowerCase())) {
-        return false;
+      if (searchId) {
+        const q = searchId.toLowerCase();
+        const matchesNum = order.orderNumber.toLowerCase().includes(q);
+        const matchesTable = (order.tableName ?? '').toLowerCase().includes(q) ||
+                             (order.tableCode ?? '').toLowerCase().includes(q);
+        if (!matchesNum && !matchesTable) return false;
       }
-      // Filtro por status
-      if (filter !== 'all' && order.status !== filter) {
-        return false;
-      }
-      // Filtro por fonte
-      if (sourceFilter !== 'all' && order.source !== sourceFilter) {
-        return false;
-      }
+      if (filter !== 'all' && order.status !== filter) return false;
       return true;
     })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case 'oldest':
-          return a.createdAt.localeCompare(b.createdAt);
-        case 'newest':
-        default:
-          return b.createdAt.localeCompare(a.createdAt);
-      }
-    });
+    .sort((a, b) => sortBy === 'oldest'
+      ? a.createdAt.localeCompare(b.createdAt)
+      : b.createdAt.localeCompare(a.createdAt)
+    );
 
   const statusCounts = {
     novo: orders.filter(o => o.status === 'novo').length,
@@ -60,133 +106,57 @@ export default function OrdersCenter() {
     pronto: orders.filter(o => o.status === 'pronto').length,
   };
 
-  const sourceCounts = {
-    ifood: orders.filter(o => o.source === 'ifood').length,
-    ubereats: orders.filter(o => o.source === 'ubereats').length,
-    rappi: orders.filter(o => o.source === 'rappi').length,
-  };
-
-  const activeFiltersCount = [
-    filter !== 'all' ? 1 : 0,
-    sourceFilter !== 'all' ? 1 : 0,
-    sortBy !== 'newest' ? 1 : 0
-  ].reduce((a, b) => a + b, 0);
+  const activeFiltersCount = (filter !== 'all' ? 1 : 0) + (sortBy !== 'newest' ? 1 : 0);
 
   return (
     <div className="min-h-screen bg-white">
-      <PageHeader 
-        title="Central de Pedidos" 
-        subtitle="Gerencie todos os pedidos em tempo real"
+      <PageHeader
+        title="Central de Pedidos"
+        subtitle="Gerencie os pedidos do restaurante em tempo real"
         icon="📋"
       />
-      
+
       <div className="container mx-auto max-w-6xl px-4 py-4">
-        {/* Barra de Busca e Filtros */}
         <div className="flex gap-3 mb-4">
-          {/* Campo de Busca */}
           <div className="flex-1">
             <input
               type="text"
-              placeholder="Buscar por número do pedido..."
+              placeholder="Buscar por pedido ou mesa..."
               value={searchId}
-              onChange={(e) => setSearchId(e.target.value)}
+              onChange={e => setSearchId(e.target.value)}
               className="w-full px-3 py-2 border border-dark/20 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 h-[42px]"
             />
           </div>
-          
+
           <FilterButton
             activeFiltersCount={activeFiltersCount}
             showFilters={showFilters}
             onToggle={() => setShowFilters(!showFilters)}
             onClearFilters={clearFilters}
           >
-            {/* Status */}
             <div className="mb-3">
               <h3 className="text-xs font-semibold text-dark mb-2">Status:</h3>
               <div className="flex flex-wrap gap-1">
-                <button
-                  onClick={() => setFilter('all')}
-                  className={`px-2 py-1 rounded text-xs transition-all ${
-                    filter === 'all' ? 'bg-primary text-secondary' : 'bg-secondary text-dark hover:bg-secondary/80'
-                  }`}
-                >
-                  Todos
-                </button>
-                <button
-                  onClick={() => setFilter('novo')}
-                  className={`px-2 py-1 rounded text-xs transition-all ${
-                    filter === 'novo' ? 'bg-primary text-secondary' : 'bg-secondary text-dark hover:bg-secondary/80'
-                  }`}
-                >
-                  Novos ({statusCounts.novo})
-                </button>
-                <button
-                  onClick={() => setFilter('aceito')}
-                  className={`px-2 py-1 rounded text-xs transition-all ${
-                    filter === 'aceito' ? 'bg-primary text-secondary' : 'bg-secondary text-dark hover:bg-secondary/80'
-                  }`}
-                >
-                  Aceitos ({statusCounts.aceito})
-                </button>
-                <button
-                  onClick={() => setFilter('preparo')}
-                  className={`px-2 py-1 rounded text-xs transition-all ${
-                    filter === 'preparo' ? 'bg-primary text-secondary' : 'bg-secondary text-dark hover:bg-secondary/80'
-                  }`}
-                >
-                  Preparo ({statusCounts.preparo})
-                </button>
-                <button
-                  onClick={() => setFilter('pronto')}
-                  className={`px-2 py-1 rounded text-xs transition-all ${
-                    filter === 'pronto' ? 'bg-primary text-secondary' : 'bg-secondary text-dark hover:bg-secondary/80'
-                  }`}
-                >
-                  Prontos ({statusCounts.pronto})
-                </button>
+                {([
+                  ['all', 'Todos'],
+                  ['novo', `Novos (${statusCounts.novo})`],
+                  ['aceito', `Aceitos (${statusCounts.aceito})`],
+                  ['preparo', `Preparo (${statusCounts.preparo})`],
+                  ['pronto', `Prontos (${statusCounts.pronto})`],
+                ] as const).map(([val, label]) => (
+                  <button
+                    key={val}
+                    onClick={() => setFilter(val)}
+                    className={`px-2 py-1 rounded text-xs transition-all ${
+                      filter === val ? 'bg-primary text-secondary' : 'bg-secondary text-dark hover:bg-secondary/80'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* Plataforma */}
-            <div className="mb-3">
-              <h3 className="text-xs font-semibold text-dark mb-2">Plataforma:</h3>
-              <div className="flex flex-wrap gap-1">
-                <button
-                  onClick={() => setSourceFilter('all')}
-                  className={`px-2 py-1 rounded text-xs transition-all ${
-                    sourceFilter === 'all' ? 'bg-primary text-secondary' : 'bg-secondary text-dark hover:bg-secondary/80'
-                  }`}
-                >
-                  Todas
-                </button>
-                <button
-                  onClick={() => setSourceFilter('ifood')}
-                  className={`px-2 py-1 rounded text-xs transition-all ${
-                    sourceFilter === 'ifood' ? 'bg-primary text-secondary' : 'bg-secondary text-dark hover:bg-secondary/80'
-                  }`}
-                >
-                  🍔 iFood ({sourceCounts.ifood})
-                </button>
-                <button
-                  onClick={() => setSourceFilter('ubereats')}
-                  className={`px-2 py-1 rounded text-xs transition-all ${
-                    sourceFilter === 'ubereats' ? 'bg-primary text-secondary' : 'bg-secondary text-dark hover:bg-secondary/80'
-                  }`}
-                >
-                  🚗 Uber ({sourceCounts.ubereats})
-                </button>
-                <button
-                  onClick={() => setSourceFilter('rappi')}
-                  className={`px-2 py-1 rounded text-xs transition-all ${
-                    sourceFilter === 'rappi' ? 'bg-primary text-secondary' : 'bg-secondary text-dark hover:bg-secondary/80'
-                  }`}
-                >
-                  ⚡ Rappi ({sourceCounts.rappi})
-                </button>
-              </div>
-            </div>
-
-            {/* Ordenação */}
             <div>
               <h3 className="text-xs font-semibold text-dark mb-2">Ordenar:</h3>
               <div className="flex gap-1">
@@ -211,24 +181,16 @@ export default function OrdersCenter() {
           </FilterButton>
         </div>
 
-        {/* Lista de Pedidos - Layout Vertical com Animações */}
         <div className="space-y-2">
-          {filteredAndSortedOrders.length === 0 ? (
-            <EmptyState 
-              message={searchId ? 'Nenhum pedido encontrado para esta busca' : 'Nenhum pedido encontrado'}
+          {filteredOrders.length === 0 ? (
+            <EmptyState
+              message={searchId ? 'Nenhum pedido encontrado para esta busca' : 'Nenhum pedido de mesa registrado ainda'}
               icon="📦"
             />
           ) : (
-            filteredAndSortedOrders.map((order, index) => (
-              <div 
-                key={order.id} 
-                className="animate-slide-in-up"
-                style={{ animationDelay: `${index * 50}ms` }}
-              >
-                <OrderCard 
-                  order={order} 
-                  onStatusChange={handleStatusChange}
-                />
+            filteredOrders.map((order, index) => (
+              <div key={order.id} className="animate-slide-in-up" style={{ animationDelay: `${index * 50}ms` }}>
+                <OrderCard order={order} onStatusChange={handleStatusChange} />
               </div>
             ))
           )}

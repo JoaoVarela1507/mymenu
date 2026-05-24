@@ -10,12 +10,15 @@ import Reports from './pages/admin/Reports';
 import Settings from './pages/admin/Settings';
 import AdminProfile from './pages/admin/Profile';
 import Plans from './pages/admin/Plans';
+import Promotions from './pages/admin/Promotions';
+import Tables from './pages/admin/Tables';
 import Home from './pages/consumer/Home';
 import RestaurantPage from './pages/consumer/RestaurantPage';
 import Nearby from './pages/consumer/Nearby';
 import Favorites from './pages/consumer/Favorites';
 import ConsumerProfile from './pages/consumer/Profile';
 import OrderHistory from './pages/consumer/OrderHistory';
+import Garcom from './pages/consumer/Garcom';
 import TopRated from './pages/consumer/TopRated';
 import Offers from './pages/consumer/Offers';
 import Login from './pages/login/Login';
@@ -52,6 +55,7 @@ function App() {
               <Route path="favoritos" element={<ProtectedRoute allowedTypes={['consumer']} soft><Favorites /></ProtectedRoute>} />
               <Route path="perfil" element={<ProtectedRoute allowedTypes={['consumer']} soft><ConsumerProfile /></ProtectedRoute>} />
               <Route path="historico" element={<ProtectedRoute allowedTypes={['consumer']} soft><OrderHistory /></ProtectedRoute>} />
+              <Route path="garcom" element={<ProtectedRoute allowedTypes={['consumer']} soft><Garcom /></ProtectedRoute>} />
 
               {/* Admin */}
               <Route path="admin/dashboard" element={
@@ -92,6 +96,16 @@ function App() {
               <Route path="admin/plans" element={
                 <ProtectedRoute allowedTypes={['admin']}>
                   <Plans />
+                </ProtectedRoute>
+              } />
+              <Route path="admin/promotions" element={
+                <ProtectedRoute allowedTypes={['admin']}>
+                  <Promotions />
+                </ProtectedRoute>
+              } />
+              <Route path="admin/tables" element={
+                <ProtectedRoute allowedTypes={['admin']}>
+                  <Tables />
                 </ProtectedRoute>
               } />
             </Route>

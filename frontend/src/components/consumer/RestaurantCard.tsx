@@ -47,9 +47,9 @@ export default function RestaurantCard({ restaurant }: RestaurantCardProps) {
             </div>
 
             <div className="flex items-center gap-4 text-sm text-dark/70 mb-2">
-              <span>⭐ {restaurant.rating}</span>
-              <span>📍 {restaurant.distance} km</span>
-              <span>🕐 {restaurant.deliveryTime}</span>
+              <span>⭐ {restaurant.rating > 0 ? restaurant.rating : '—'}</span>
+              <span>📍 {restaurant.city || restaurant.address || '—'}</span>
+              <span>🕐 {restaurant.openTime && restaurant.closeTime ? `${restaurant.openTime}–${restaurant.closeTime}` : restaurant.deliveryTime}</span>
             </div>
 
             <div className="flex items-center justify-between">

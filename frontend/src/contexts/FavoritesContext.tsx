@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
+import { useAuth } from './AuthContext';
 
 interface FavoritesContextType {
   favorites: string[];
@@ -10,17 +11,25 @@ interface FavoritesContextType {
 const FavoritesContext = createContext<FavoritesContextType | undefined>(undefined);
 
 export function FavoritesProvider({ children }: { children: ReactNode }) {
-  const [favorites, setFavorites] = useState<string[]>(() => {
-    const stored = localStorage.getItem('mymenu_favorites');
-    return stored ? JSON.parse(stored) : [];
-  });
+  const { user } = useAuth();
+  const key = user?.id ? `mymenu_favorites_${user.id}` : null;
+
+  const [favorites, setFavorites] = useState<string[]>([]);
 
   useEffect(() => {
-    localStorage.setItem('mymenu_favorites', JSON.stringify(favorites));
-  }, [favorites]);
+    if (!key) { setFavorites([]); return; }
+    const stored = localStorage.getItem(key);
+    setFavorites(stored ? JSON.parse(stored) : []);
+  }, [key]);
+
+  useEffect(() => {
+    if (!key) return;
+    localStorage.setItem(key, JSON.stringify(favorites));
+  }, [favorites, key]);
 
   const toggleFavorite = (restaurantId: string) => {
-    setFavorites(prev => 
+    if (!user) return;
+    setFavorites(prev =>
       prev.includes(restaurantId)
         ? prev.filter(id => id !== restaurantId)
         : [...prev, restaurantId]
@@ -38,8 +47,6 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
 
 export function useFavorites() {
   const context = useContext(FavoritesContext);
-  if (!context) {
-    throw new Error('useFavorites must be used within FavoritesProvider');
-  }
+  if (!context) throw new Error('useFavorites must be used within FavoritesProvider');
   return context;
 }

@@ -45,12 +45,7 @@ interface MenuItemData {
   name: string;
   description?: string;
   categoryId: string;
-  prices: {
-    mymenu: number;
-    ifood: number;
-    ubereats: number;
-    rappi: number;
-  };
+  price: number;
   image?: string;
   available?: boolean;
 }

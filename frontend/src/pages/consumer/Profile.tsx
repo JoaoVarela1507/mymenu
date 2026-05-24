@@ -1,251 +1,173 @@
 import { useState } from 'react';
-import { Card, Button, Input, PageHeader } from '../../components/shared';
+import { PageHeader } from '../../components/shared';
 import { useAuth } from '../../contexts/AuthContext';
+import { useFavorites } from '../../contexts/FavoritesContext';
+import { updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
+import { auth } from '../../lib/firebase';
 
 export default function Profile() {
   const { user } = useAuth();
-  const [isEditing, setIsEditing] = useState(false);
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [formData, setFormData] = useState({
-    name: user?.name || 'Helena Souza',
-    email: user?.email || 'helena@email.com',
-    phone: '(11) 98765-4321',
-    address: 'Rua das Flores, 123, Apto 456 - São Paulo, SP',
-  });
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  });
+  const { favorites } = useFavorites();
 
-  const handleSave = () => {
-    setIsEditing(false);
-    alert('✅ Perfil atualizado com sucesso!');
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' });
+  const [pwError, setPwError] = useState('');
+  const [pwSuccess, setPwSuccess] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const isGoogleUser = auth.currentUser?.providerData.some(p => p.providerId === 'google.com');
+
+  const handleChangePassword = async () => {
+    setPwError('');
+    if (!pwForm.current) { setPwError('Digite sua senha atual.'); return; }
+    if (pwForm.next.length < 6) { setPwError('A nova senha deve ter no mínimo 6 caracteres.'); return; }
+    if (pwForm.next !== pwForm.confirm) { setPwError('As senhas não coincidem.'); return; }
+
+    setSaving(true);
+    try {
+      const currentUser = auth.currentUser!;
+      const credential = EmailAuthProvider.credential(currentUser.email!, pwForm.current);
+      await reauthenticateWithCredential(currentUser, credential);
+      await updatePassword(currentUser, pwForm.next);
+      setPwSuccess(true);
+      setPwForm({ current: '', next: '', confirm: '' });
+      setShowPasswordForm(false);
+    } catch (err: any) {
+      if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        setPwError('Senha atual incorreta.');
+      } else {
+        setPwError('Erro ao alterar senha. Tente novamente.');
+      }
+    }
+    setSaving(false);
   };
 
-  const handleChangePassword = () => {
-    if (!passwordData.currentPassword) {
-      alert('❌ Digite sua senha atual');
-      return;
-    }
-    if (!passwordData.newPassword) {
-      alert('❌ Digite uma nova senha');
-      return;
-    }
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      alert('❌ As senhas não coincidem');
-      return;
-    }
-    if (passwordData.newPassword.length < 6) {
-      alert('❌ A senha deve ter no mínimo 6 caracteres');
-      return;
-    }
-    
-    setPasswordData({
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: '',
-    });
-    setIsChangingPassword(false);
-    alert('✅ Senha alterada com sucesso!');
-  };
+  const initial = user?.name?.charAt(0).toUpperCase() ?? '?';
 
   return (
     <div className="min-h-screen bg-white">
-      <PageHeader 
-        title="Meu Perfil" 
-        subtitle="Gerencie suas informações pessoais"
+      <PageHeader
+        title="Meu Perfil"
+        subtitle="Suas informações pessoais"
         icon="👤"
       />
-      
-      <div className="container mx-auto max-w-3xl px-4 py-6">
-        {/* Avatar e Info Rápida */}
-        <Card className="mb-8">
-          <div className="flex items-center gap-6 mb-6">
-            <div className="w-24 h-24 bg-gradient-to-br from-pink-400 to-red-500 rounded-full flex items-center justify-center text-5xl">
-              👩
-            </div>
-            <div>
-              <h2 className="text-3xl font-bold text-gray-800 mb-2">{formData.name}</h2>
-              <p className="text-gray-600 mb-1">📧 {formData.email}</p>
-              <p className="text-gray-600">📱 {formData.phone}</p>
-            </div>
+
+      <div className="container mx-auto max-w-2xl px-4 py-8 space-y-5">
+
+        {/* Card principal */}
+        <div className="bg-[#fdf6ec] border border-[#e8d9b5] rounded-2xl p-6 flex items-center gap-5">
+          <div className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold text-white flex-shrink-0"
+            style={{ background: 'linear-gradient(135deg, #660000, #C92924)' }}>
+            {initial}
           </div>
-
-          <div className="flex gap-3">
-            {!isEditing && (
-              <Button 
-                variant="primary"
-                onClick={() => setIsEditing(true)}
-              >
-                ✏️ Editar Perfil
-              </Button>
-            )}
+          <div className="flex-1 min-w-0">
+            <h2 className="text-xl font-bold text-gray-800">{user?.name}</h2>
+            <p className="text-sm text-gray-500 mt-0.5">{user?.email}</p>
+            <span className="inline-block mt-2 text-xs px-2 py-0.5 rounded-full bg-[#660000]/10 text-[#660000] font-semibold">
+              {user?.type === 'admin' ? '🏪 Restaurante' : '🛒 Consumidor'}
+            </span>
           </div>
-        </Card>
-
-        {/* Formulário de Edição */}
-        {isEditing && (
-          <Card className="mb-8 bg-blue-50">
-            <h3 className="text-lg font-bold text-gray-800 mb-4">Editar Informações</h3>
-            <div className="space-y-4">
-              <Input
-                label="Nome Completo"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              />
-              <Input
-                label="Email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              />
-              <Input
-                label="Telefone"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              />
-              <Input
-                label="Endereço"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              />
-              <div className="flex gap-3 pt-4">
-                <Button 
-                  variant="primary"
-                  onClick={handleSave}
-                >
-                  💾 Salvar Alterações
-                </Button>
-                <Button 
-                  variant="outline"
-                  onClick={() => setIsEditing(false)}
-                >
-                  ✕ Cancelar
-                </Button>
-              </div>
-            </div>
-          </Card>
-        )}
-
-        {/* Seções de Info */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card>
-            <h3 className="text-lg font-bold text-gray-800 mb-4">📍 Endereço</h3>
-            <p className="text-gray-700 mb-4">{formData.address}</p>
-            <Button variant="outline" size="sm">Alterar Endereço</Button>
-          </Card>
-
-          <Card>
-            <h3 className="text-lg font-bold text-gray-800 mb-4">🔒 Segurança</h3>
-            <div className="space-y-2">
-              <p className="text-sm text-gray-600 mb-3">Gerencie sua senha e segurança</p>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => setIsChangingPassword(!isChangingPassword)}
-              >
-                {isChangingPassword ? '✕ Cancelar' : '🔑 Alterar Senha'}
-              </Button>
-            </div>
-          </Card>
+          <div className="text-center flex-shrink-0">
+            <p className="text-2xl font-bold text-[#660000]">{favorites.length}</p>
+            <p className="text-xs text-gray-500">Favoritos</p>
+          </div>
         </div>
 
-        {/* Alterar Senha */}
-        {isChangingPassword && (
-          <Card className="mt-6 bg-red-50 border-l-4 border-red-400">
-            <h3 className="text-lg font-bold text-gray-800 mb-4">🔐 Alterar Senha</h3>
-            <div className="space-y-4">
-              <Input
-                label="Senha Atual"
-                type="password"
-                placeholder="Digite sua senha atual"
-                value={passwordData.currentPassword}
-                onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-              />
-              <Input
-                label="Nova Senha"
-                type="password"
-                placeholder="Digite uma nova senha"
-                value={passwordData.newPassword}
-                onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-              />
-              <Input
-                label="Confirmar Nova Senha"
-                type="password"
-                placeholder="Confirme a nova senha"
-                value={passwordData.confirmPassword}
-                onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-              />
-              <div className="flex gap-3 pt-4">
-                <Button 
-                  onClick={handleChangePassword}
-                  className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-semibold"
-                >
-                  💾 Salvar Nova Senha
-                </Button>
-                <Button 
-                  variant="outline"
-                  onClick={() => {
-                    setIsChangingPassword(false);
-                    setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-                  }}
-                >
-                  ✕ Cancelar
-                </Button>
-              </div>
-            </div>
-          </Card>
-        )}
+        {/* Segurança */}
+        <div className="bg-[#fdf6ec] border border-[#e8d9b5] rounded-2xl p-6">
+          <h3 className="text-base font-bold text-gray-800 mb-3">🔒 Segurança</h3>
 
-        {/* Preferências */}
-        <Card className="mt-6">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">⚙️ Preferências</h3>
-          <div className="space-y-4">
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input 
-                type="checkbox" 
-                defaultChecked 
-                className="w-4 h-4 rounded border-gray-300 cursor-pointer"
-              />
-              <span className="text-sm text-gray-700">Receber notificações de ofertas</span>
-            </label>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input 
-                type="checkbox" 
-                defaultChecked 
-                className="w-4 h-4 rounded border-gray-300 cursor-pointer"
-              />
-              <span className="text-sm text-gray-700">Receber notificações de novos restaurantes</span>
-            </label>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input 
-                type="checkbox" 
-                className="w-4 h-4 rounded border-gray-300 cursor-pointer"
-              />
-              <span className="text-sm text-gray-700">Compartilhar histórico de pedidos</span>
-            </label>
-          </div>
-        </Card>
+          {isGoogleUser ? (
+            <p className="text-sm text-gray-500">Conta vinculada ao Google — a senha é gerenciada pelo Google.</p>
+          ) : (
+            <>
+              {pwSuccess && (
+                <p className="text-sm text-green-600 font-semibold mb-3">✅ Senha alterada com sucesso!</p>
+              )}
+              {!showPasswordForm ? (
+                <button
+                  onClick={() => { setShowPasswordForm(true); setPwSuccess(false); }}
+                  className="text-sm px-4 py-2 rounded-lg border-2 border-[#660000] text-[#660000] font-semibold hover:bg-[#660000] hover:text-white transition-colors"
+                >
+                  🔑 Alterar Senha
+                </button>
+              ) : (
+                <div className="space-y-3">
+                  {pwError && <p className="text-xs text-red-600 font-medium">{pwError}</p>}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Senha atual</label>
+                    <input
+                      type="password"
+                      value={pwForm.current}
+                      onChange={e => setPwForm(f => ({ ...f, current: e.target.value }))}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#660000]"
+                      placeholder="••••••"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Nova senha</label>
+                    <input
+                      type="password"
+                      value={pwForm.next}
+                      onChange={e => setPwForm(f => ({ ...f, next: e.target.value }))}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#660000]"
+                      placeholder="Mínimo 6 caracteres"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Confirmar nova senha</label>
+                    <input
+                      type="password"
+                      value={pwForm.confirm}
+                      onChange={e => setPwForm(f => ({ ...f, confirm: e.target.value }))}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#660000]"
+                      placeholder="••••••"
+                    />
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={handleChangePassword}
+                      disabled={saving}
+                      className="px-4 py-2 bg-[#660000] text-white text-sm font-semibold rounded-lg hover:bg-[#550000] transition-colors disabled:opacity-60"
+                    >
+                      {saving ? 'Salvando...' : '💾 Salvar'}
+                    </button>
+                    <button
+                      onClick={() => { setShowPasswordForm(false); setPwError(''); setPwForm({ current: '', next: '', confirm: '' }); }}
+                      className="px-4 py-2 border border-gray-300 text-sm text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
 
-        {/* Dados da Conta */}
-        <Card className="mt-6 bg-gray-50">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">📊 Estatísticas</h3>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="text-center">
-              <p className="text-3xl font-bold" style={{ color: '#660000' }}>24</p>
-              <p className="text-xs text-gray-600 mt-1">Pedidos Realizados</p>
+        {/* Conta */}
+        <div className="bg-[#fdf6ec] border border-[#e8d9b5] rounded-2xl p-6">
+          <h3 className="text-base font-bold text-gray-800 mb-3">📋 Dados da Conta</h3>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-500">Nome</span>
+              <span className="font-semibold text-gray-800">{user?.name}</span>
             </div>
-            <div className="text-center">
-              <p className="text-3xl font-bold" style={{ color: '#660000' }}>R$ 1.240</p>
-              <p className="text-xs text-gray-600 mt-1">Total Gasto</p>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Email</span>
+              <span className="font-semibold text-gray-800">{user?.email}</span>
             </div>
-            <div className="text-center">
-              <p className="text-3xl font-bold" style={{ color: '#660000' }}>8</p>
-              <p className="text-xs text-gray-600 mt-1">Restaurantes Favoritos</p>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Tipo de conta</span>
+              <span className="font-semibold text-gray-800 capitalize">{user?.type === 'admin' ? 'Restaurante' : 'Consumidor'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Login</span>
+              <span className="font-semibold text-gray-800">{isGoogleUser ? 'Google' : 'Email / Senha'}</span>
             </div>
           </div>
-        </Card>
+        </div>
+
       </div>
     </div>
   );

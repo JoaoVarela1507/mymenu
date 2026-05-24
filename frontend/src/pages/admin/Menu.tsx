@@ -19,6 +19,8 @@ export default function Menu() {
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [saveError, setSaveError] = useState('');
 
   const activePlan = getCurrentPlan();
   const activeRule = getPlanRule(activePlan);
@@ -30,17 +32,20 @@ export default function Menu() {
 
   const loadData = async () => {
     setLoading(true);
+    setLoadError('');
     try {
-      const [rest, cats, items] = await Promise.all([
-        getRestaurantByOwnerId(user!.id),
-        getCategories(user!.id),
-        getMenuItems(user!.id),
-      ]);
+      const rest = await getRestaurantByOwnerId(user!.id);
       setRestaurant(rest);
+      const restaurantId = rest?.id ?? user!.id;
+      const [cats, items] = await Promise.all([
+        getCategories(restaurantId),
+        getMenuItems(restaurantId),
+      ]);
       setCategories(cats);
       setMenuItems(items);
-    } catch (e) {
+    } catch (e: any) {
       console.error('Erro ao carregar dados:', e);
+      setLoadError(`Erro ao carregar dados: ${e?.message ?? e}`);
     }
     setLoading(false);
   };
@@ -58,31 +63,47 @@ export default function Menu() {
     .sort((a, b) => a.category.order - b.category.order);
 
   const handleSaveProduct = async (product: MenuItem) => {
+    setSaveError('');
     if (!product.id || product.id.startsWith('temp_')) {
       if (!canAddProduct(menuItems.length, activePlan)) {
         alert(`🚫 Limite do plano atingido.\nPlano: ${activeRule.label}\nLimite: ${planLimitLabel(activeRule.maxProducts)} produtos`);
         return;
       }
     }
-    const id = await saveMenuItem(user!.id, product);
-    const saved = { ...product, id };
-    setMenuItems(prev => prev.some(i => i.id === id) ? prev.map(i => i.id === id ? saved : i) : [...prev, saved]);
-    setEditingProduct(null);
-    setIsAddingProduct(false);
+    try {
+      const restaurantId = restaurant?.id ?? user!.id;
+      const id = await saveMenuItem(restaurantId, product);
+      const saved = { ...product, id, restaurantId };
+      setMenuItems(prev => prev.some(i => i.id === id) ? prev.map(i => i.id === id ? saved : i) : [...prev, saved]);
+      setEditingProduct(null);
+      setIsAddingProduct(false);
+    } catch (e: any) {
+      setSaveError(`Erro ao salvar produto: ${e?.message ?? e}`);
+    }
   };
 
   const handleDeleteProduct = async (id: string) => {
-    await deleteMenuItem(id);
-    setMenuItems(prev => prev.filter(i => i.id !== id));
-    setDeleteConfirm(null);
+    try {
+      await deleteMenuItem(id);
+      setMenuItems(prev => prev.filter(i => i.id !== id));
+      setDeleteConfirm(null);
+    } catch (e: any) {
+      setSaveError(`Erro ao deletar produto: ${e?.message ?? e}`);
+    }
   };
 
   const handleSaveCategory = async (category: MenuCategory) => {
-    const id = await saveCategory(user!.id, category);
-    const saved = { ...category, id };
-    setCategories(prev => prev.some(c => c.id === id) ? prev.map(c => c.id === id ? saved : c) : [...prev, saved]);
-    setEditingCategory(null);
-    setIsAddingCategory(false);
+    setSaveError('');
+    try {
+      const restaurantId = restaurant?.id ?? user!.id;
+      const id = await saveCategory(restaurantId, category);
+      const saved = { ...category, id, restaurantId };
+      setCategories(prev => prev.some(c => c.id === id) ? prev.map(c => c.id === id ? saved : c) : [...prev, saved]);
+      setEditingCategory(null);
+      setIsAddingCategory(false);
+    } catch (e: any) {
+      setSaveError(`Erro ao salvar categoria: ${e?.message ?? e}`);
+    }
   };
 
   const handleDeleteCategory = async (id: string) => {
@@ -90,13 +111,30 @@ export default function Menu() {
       alert('Mova os produtos desta categoria antes de deletá-la.');
       return;
     }
-    await deleteCategory(id);
-    setCategories(prev => prev.filter(c => c.id !== id));
+    try {
+      await deleteCategory(id);
+      setCategories(prev => prev.filter(c => c.id !== id));
+    } catch (e: any) {
+      setSaveError(`Erro ao deletar categoria: ${e?.message ?? e}`);
+    }
   };
 
   if (loading) return (
     <div className="flex items-center justify-center min-h-screen">
       <p className="text-[#660000] font-bold text-lg">Carregando cardápio...</p>
+    </div>
+  );
+
+  if (loadError) return (
+    <div className="flex items-center justify-center min-h-screen p-8">
+      <div className="bg-red-50 border-2 border-red-400 rounded-xl p-6 max-w-lg text-center">
+        <p className="text-2xl mb-3">⚠️</p>
+        <p className="font-bold text-red-700 mb-2">Erro ao carregar dados</p>
+        <p className="text-sm text-red-600 mb-4">{loadError}</p>
+        <button onClick={loadData} className="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700">
+          Tentar novamente
+        </button>
+      </div>
     </div>
   );
 
@@ -112,6 +150,15 @@ export default function Menu() {
       </div>
 
       <div className="max-w-7xl mx-auto px-8 py-8 space-y-6">
+        {saveError && (
+          <div className="bg-red-50 border border-red-400 rounded-lg p-4 flex items-start gap-3">
+            <span className="text-red-500 text-xl">⚠️</span>
+            <div className="flex-1">
+              <p className="text-red-700 font-semibold text-sm">{saveError}</p>
+            </div>
+            <button onClick={() => setSaveError('')} className="text-red-400 hover:text-red-600 font-bold">✕</button>
+          </div>
+        )}
         {/* Plano */}
         <Card className="border border-gray-200 bg-white">
           <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
@@ -194,12 +241,10 @@ export default function Menu() {
                           <h3 className="text-lg font-bold text-gray-800 mb-1">{item.name}</h3>
                           <p className="text-sm text-gray-600 mb-2">{item.description}</p>
                           <div className="flex flex-wrap gap-3 mb-2">
-                            {Object.entries(item.prices ?? {}).filter(([, v]) => v > 0).map(([platform, price]) => (
-                              <div key={platform} className="text-sm">
-                                <span className="font-semibold text-gray-700 capitalize">{platform}:</span>
-                                <span className="text-[#660000] font-bold ml-1">R$ {(price as number).toFixed(2)}</span>
-                              </div>
-                            ))}
+                            <div className="text-sm">
+                              <span className="font-semibold text-gray-700">Preço:</span>
+                              <span className="text-[#660000] font-bold ml-1">R$ {(item.price ?? 0).toFixed(2)}</span>
+                            </div>
                           </div>
                           <div className="flex gap-2 flex-wrap text-xs">
                             <span className={`px-3 py-1 rounded-full ${item.available ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
@@ -226,7 +271,7 @@ export default function Menu() {
         <ProductFormModal
           product={editingProduct}
           categories={categories}
-          restaurantId={user!.id}
+          restaurantId={restaurant?.id ?? user!.id}
           onSave={handleSaveProduct}
           onClose={() => { setEditingProduct(null); setIsAddingProduct(false); }}
         />
@@ -261,7 +306,7 @@ function ProductFormModal({ product, categories, restaurantId, onSave, onClose }
     ingredients: '',
     image: '🍽️',
     categoryId: categories[0]?.id ?? '',
-    prices: { mymenu: 0, ifood: 0, ubereats: 0, rappi: 0 },
+    price: 0,
     available: true,
     allergens: [],
     isOffer: false,
@@ -306,15 +351,12 @@ function ProductFormModal({ product, categories, restaurantId, onSave, onClose }
               {[...categories].sort((a, b) => a.order - b.order).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            {(['mymenu', 'ifood', 'ubereats', 'rappi'] as const).map(p => (
-              <div key={p}>
-                <label className="block text-sm font-semibold text-gray-700 mb-1 capitalize">Preço {p}</label>
-                <input type="number" step="0.01" value={form.prices?.[p] ?? 0}
-                  onChange={e => setForm({ ...form, prices: { ...form.prices, [p]: parseFloat(e.target.value) || 0 } })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#660000]" />
-              </div>
-            ))}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Preço (R$)</label>
+            <input type="number" step="0.01" min="0" value={form.price ?? 0}
+              onChange={e => setForm({ ...form, price: parseFloat(e.target.value) || 0 })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#660000]"
+              placeholder="Ex: 39.90" />
           </div>
           <div className="flex items-center gap-2">
             <input type="checkbox" id="avail" checked={form.available} onChange={e => setForm({ ...form, available: e.target.checked })} className="w-4 h-4" />

@@ -7,7 +7,7 @@ import {
   signInWithPopup,
   type User as FirebaseUser,
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import type { AuthUser } from '../types/auth';
 
@@ -20,21 +20,23 @@ export async function apiLogin(email: string, password: string): Promise<AuthUse
   }
 }
 
+const PROFILE_KEY = 'mymenu_active_profile';
+
 export async function apiLoginWithProfile(email: string, password: string, profile: 'consumer' | 'admin'): Promise<AuthUser | null> {
   try {
-    // Usuário já está autenticado pelo Firebase, só pega o uid atual
     const currentUser = auth.currentUser;
     if (!currentUser) {
-      // Se não estiver autenticado ainda, faz login
       const { user } = await signInWithEmailAndPassword(auth, email, password);
       const snap = await getDoc(doc(db, 'users', user.uid));
       if (!snap.exists()) return null;
       const data = snap.data();
+      localStorage.setItem(PROFILE_KEY, profile);
       return { id: user.uid, name: data.name, email: data.email, type: profile };
     }
     const snap = await getDoc(doc(db, 'users', currentUser.uid));
     if (!snap.exists()) return null;
     const data = snap.data();
+    localStorage.setItem(PROFILE_KEY, profile);
     return { id: currentUser.uid, name: data.name, email: data.email, type: profile };
   } catch {
     return null;
@@ -121,7 +123,7 @@ export async function apiRegisterRestaurant(payload: {
   }
 }
 
-export async function loginWithGoogle(): Promise<AuthUser | null> {
+export async function loginWithGoogle(): Promise<AuthUser | null | 'choose_profile'> {
   try {
     const provider = new GoogleAuthProvider();
     const result = await signInWithPopup(auth, provider);
@@ -137,6 +139,11 @@ export async function loginWithGoogle(): Promise<AuthUser | null> {
       });
     }
 
+    const profiles = await checkAvailableProfiles(user.uid);
+    if (profiles.length > 1) {
+      return 'choose_profile';
+    }
+
     return await getFirestoreUser(user);
   } catch {
     return null;
@@ -148,6 +155,7 @@ export async function handleGoogleRedirect(): Promise<AuthUser | null> {
 }
 
 export async function apiLogout(): Promise<void> {
+  localStorage.removeItem(PROFILE_KEY);
   await signOut(auth);
 }
 
@@ -174,11 +182,14 @@ async function getFirestoreUser(firebaseUser: FirebaseUser): Promise<AuthUser | 
   const snap = await getDoc(doc(db, 'users', firebaseUser.uid));
   if (!snap.exists()) return null;
   const data = snap.data();
+  const saved = localStorage.getItem(PROFILE_KEY) as 'consumer' | 'admin' | null;
+  const profiles = await checkAvailableProfiles(firebaseUser.uid);
+  const type: 'consumer' | 'admin' = saved && profiles.includes(saved) ? saved : data.role;
   return {
     id: firebaseUser.uid,
     name: data.name,
     email: data.email,
-    type: data.role,
+    type,
   };
 }
 

@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Card, Button, PageHeader } from '../../components/shared';
+import { useAuth } from '../../contexts/AuthContext';
+import { updateRestaurantAppearance } from '../../lib/firestoreService';
 import {
   PLAN_RULES,
   getCurrentPlan,
@@ -12,17 +14,24 @@ import {
 } from '../../lib/subscriptionPlan';
 
 export default function Plans() {
+  const { user } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan>(getCurrentPlan());
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(getCurrentPaymentMethod());
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   const planList = [PLAN_RULES.prata, PLAN_RULES.ouro, PLAN_RULES.diamante];
 
-  const handleSaveSubscription = () => {
+  const handleSaveSubscription = async () => {
     setCurrentPlan(selectedPlan);
     setCurrentPaymentMethod(paymentMethod);
-    alert(
-      `✅ Assinatura atualizada com sucesso!\n\nPlano: ${PLAN_RULES[selectedPlan].icon} ${PLAN_RULES[selectedPlan].label}\nPagamento mensal: ${paymentMethod === 'pix' ? 'Pix' : 'Boleto'}`
-    );
+    if (user?.id) {
+      setSaving(true);
+      await updateRestaurantAppearance(user.id, { plan: selectedPlan } as any);
+      setSaving(false);
+    }
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
   };
 
   return (
@@ -119,12 +128,16 @@ export default function Plans() {
               Plano escolhido: <span className="font-bold">{PLAN_RULES[selectedPlan].icon} {PLAN_RULES[selectedPlan].label}</span>
               {' '}• Pagamento: <span className="font-bold">{paymentMethod === 'pix' ? 'Pix' : 'Boleto'}</span>
             </p>
-            <Button
-              onClick={handleSaveSubscription}
-              className="bg-[#660000] hover:bg-[#550000] text-white px-6 py-2 rounded-lg font-semibold"
-            >
-              💾 Salvar Assinatura
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={handleSaveSubscription}
+                disabled={saving}
+                className="bg-[#660000] hover:bg-[#550000] text-white px-6 py-2 rounded-lg font-semibold disabled:opacity-60"
+              >
+                {saving ? 'Salvando...' : '💾 Salvar Assinatura'}
+              </Button>
+              {saved && <span className="text-sm text-green-600 font-semibold">✅ Salvo!</span>}
+            </div>
           </div>
         </Card>
       </div>
