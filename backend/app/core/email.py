@@ -2,24 +2,11 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from app.core.config import settings
-import os
+
 
 def send_reset_email(email: str, reset_token: str) -> bool:
-    """
-    Send a password reset email with a secure reset link.
-    Uses SMTP (Gmail recommended) to send HTML formatted emails.
-    
-    Args:
-        email: Recipient email address
-        reset_token: JWT reset token to include in reset link
-        
-    Returns:
-        bool: True if email sent successfully, False otherwise
-    """
     try:
-        # Get frontend URL from environment or use default
-        frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
-        reset_link = f"{frontend_url}/reset-password?token={reset_token}"
+        reset_link = f"{settings.frontend_url}/reset-password?token={reset_token}"
         
         # Create email message
         message = MIMEMultipart()

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
 from firebase_admin import auth as firebase_auth
 from google.cloud.firestore_v1 import SERVER_TIMESTAMP
+import httpx
 from app.core.firebase_admin import get_auth, get_firestore
 from app.schemas.auth import RegisterRequest, LoginRequest, LoginResponse, ForgotPasswordRequest, ResetPasswordRequest, SuccessResponse
 from app.core.security import create_access_token, create_reset_token, verify_reset_token
@@ -42,17 +43,29 @@ async def register(request: RegisterRequest):
 
 @router.post("/login", response_model=LoginResponse)
 async def login(request: LoginRequest):
+    # Verifica email + senha via Firebase REST API (Admin SDK não valida senha)
+    firebase_url = (
+        "https://identitytoolkit.googleapis.com/v1/accounts:signInWithEmailAndPassword"
+        f"?key={settings.firebase_api_key}"
+    )
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(firebase_url, json={
+            "email": request.email,
+            "password": request.password,
+            "returnSecureToken": True,
+        })
+
+    if resp.status_code != 200:
+        raise HTTPException(status_code=401, detail="Email ou senha inválidos.")
+
     fb_auth = get_auth()
     db = get_firestore()
 
     try:
         user_record = fb_auth.get_user_by_email(request.email)
-    except firebase_auth.UserNotFoundError:
-        raise HTTPException(status_code=401, detail="Email ou senha inválidos.")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao buscar usuário: {str(e)}")
 
-    # Busca dados do Firestore
     snap = db.collection("users").document(user_record.uid).get()
     if not snap.exists:
         raise HTTPException(status_code=404, detail="Usuário não encontrado no banco.")
@@ -95,9 +108,6 @@ async def forgot_password(request: ForgotPasswordRequest):
 
 @router.post("/reset-password", response_model=SuccessResponse)
 async def reset_password(request: ResetPasswordRequest):
-    if len(request.new_password) < 6:
-        raise HTTPException(status_code=400, detail="Senha deve ter no mínimo 6 caracteres.")
-
     email = verify_reset_token(request.token)
     if not email:
         raise HTTPException(status_code=400, detail="Token inválido ou expirado.")
