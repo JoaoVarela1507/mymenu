@@ -1,4 +1,4 @@
-export type SubscriptionPlan = 'prata' | 'ouro' | 'diamante';
+export type SubscriptionPlan = 'basico' | 'prata' | 'ouro' | 'diamante';
 export type PaymentMethod = 'pix' | 'boleto';
 
 export interface PlanRule {
@@ -6,22 +6,39 @@ export interface PlanRule {
   label: string;
   icon: string;
   monthlyPrice: number;
+  free: boolean;
   maxRestaurants: number;
   maxProducts: number;
   advancedReports: boolean;
   coupons: boolean;
   multiUsers: boolean;
   dashboardComplete: boolean;
-  featuredBoost: 'medio' | 'alto' | 'maximo';
+  featuredBoost: 'nenhum' | 'medio' | 'alto' | 'maximo';
   support: 'comum' | 'prioritario' | 'vip';
 }
 
 export const PLAN_RULES: Record<SubscriptionPlan, PlanRule> = {
+  basico: {
+    id: 'basico',
+    label: 'Básico',
+    icon: '🆓',
+    monthlyPrice: 0,
+    free: true,
+    maxRestaurants: 1,
+    maxProducts: 10,
+    advancedReports: false,
+    coupons: false,
+    multiUsers: false,
+    dashboardComplete: false,
+    featuredBoost: 'nenhum',
+    support: 'comum',
+  },
   prata: {
     id: 'prata',
     label: 'Prata',
     icon: '🥈',
     monthlyPrice: 29.9,
+    free: false,
     maxRestaurants: 1,
     maxProducts: 50,
     advancedReports: false,
@@ -36,6 +53,7 @@ export const PLAN_RULES: Record<SubscriptionPlan, PlanRule> = {
     label: 'Ouro',
     icon: '🥇',
     monthlyPrice: 49.9,
+    free: false,
     maxRestaurants: 2,
     maxProducts: 200,
     advancedReports: true,
@@ -50,6 +68,7 @@ export const PLAN_RULES: Record<SubscriptionPlan, PlanRule> = {
     label: 'Diamante',
     icon: '💎',
     monthlyPrice: 79.9,
+    free: false,
     maxRestaurants: Number.POSITIVE_INFINITY,
     maxProducts: Number.POSITIVE_INFINITY,
     advancedReports: true,

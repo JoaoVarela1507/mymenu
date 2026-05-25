@@ -21,6 +21,7 @@ interface AuthContextType {
   user: AuthUser | null;
   login: (credentials: LoginCredentials) => Promise<LoginResult>;
   loginWithProfile: (profile: 'consumer' | 'admin') => Promise<boolean>;
+  cancelProfileChoice: () => void;
   loginWithGoogle: () => Promise<LoginGoogleResult>;
   logout: () => void;
   isAuthenticated: boolean;
@@ -59,9 +60,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const profiles = await checkAvailableProfiles(fbUser.uid);
 
       if (profiles.length > 1) {
-        // Tem dois perfis — devolve para o Login.tsx mostrar o modal
-        suppressAuthChange.current = false;
-        return { success: true, needsProfileChoice: true, email: credentials.email, password: credentials.password };
+        // Mantém suppress=true até o usuário escolher o perfil em loginWithProfile.
+        // Se liberar aqui, onAuthChanged dispara, seta user e o Login.tsx redireciona antes do modal fechar.
+        return { success: true, needsProfileChoice: true };
       }
 
       // Só um perfil — entra direto
@@ -72,6 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
         return { success: true };
       }
+      suppressAuthChange.current = false;
       return { success: false };
     } catch {
       suppressAuthChange.current = false;
@@ -81,12 +83,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginWithProfile = async (profile: 'consumer' | 'admin'): Promise<boolean> => {
     const authUser = await apiLoginWithProfile('', '', profile);
+    suppressAuthChange.current = false; // libera só aqui, depois da escolha
     if (authUser) {
       setUser(authUser);
       setLoading(false);
       return true;
     }
     return false;
+  };
+
+  const cancelProfileChoice = () => {
+    suppressAuthChange.current = false;
+    apiLogout(); // faz sign-out do Firebase → onAuthChanged(null) → setUser(null)
   };
 
   const loginWithGoogle = async (): Promise<LoginGoogleResult> => {
@@ -119,7 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loginWithProfile, loginWithGoogle, isAuthenticated: !!user, loading, hasMultipleProfiles }}>
+    <AuthContext.Provider value={{ user, login, logout, loginWithProfile, cancelProfileChoice, loginWithGoogle, isAuthenticated: !!user, loading, hasMultipleProfiles }}>
       {children}
     </AuthContext.Provider>
   );

@@ -153,12 +153,20 @@ export default function OrderHistory() {
                 <p className="text-sm font-bold text-gray-700 mb-3">Minhas reservas</p>
                 <div className="space-y-2">
                   {pastReservations.slice(0, 8).map(r => (
-                    <div key={r.id} className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-xl text-sm">
-                      <div>
-                        <p className="font-semibold text-gray-800">{r.restaurantName}</p>
-                        <p className="text-xs text-gray-500">{r.day} às {r.time} · {r.people} {r.people === 1 ? 'pessoa' : 'pessoas'}</p>
+                    <div key={r.id} className={`p-3 bg-white border rounded-xl text-sm ${r.status === 'cancelled' ? 'border-red-200 bg-red-50' : 'border-gray-200'}`}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="font-semibold text-gray-800">{r.restaurantName}</p>
+                          <p className="text-xs text-gray-500">{r.day} às {r.time} · {r.people} {r.people === 1 ? 'pessoa' : 'pessoas'}</p>
+                        </div>
+                        <span className="text-xs font-semibold whitespace-nowrap">{resStatusLabel(r.status)}</span>
                       </div>
-                      <span className="text-xs font-semibold text-gray-600">{resStatusLabel(r.status)}</span>
+                      {r.status === 'cancelled' && r.denyReason && (
+                        <div className="mt-2 flex items-start gap-1.5 bg-red-100 border border-red-200 rounded-lg px-2.5 py-1.5">
+                          <span className="text-red-500 text-xs mt-0.5">⚠️</span>
+                          <p className="text-xs text-red-700"><span className="font-semibold">Motivo:</span> {r.denyReason}</p>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

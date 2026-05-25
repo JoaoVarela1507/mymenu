@@ -44,9 +44,25 @@ export async function apiLoginWithProfile(email: string, password: string, profi
 }
 
 export async function checkAvailableProfiles(uid: string): Promise<('consumer' | 'admin')[]> {
-  const profiles: ('consumer' | 'admin')[] = ['consumer'];
-  const restSnap = await getDoc(doc(db, 'userRestaurant', uid));
+  const profiles: ('consumer' | 'admin')[] = [];
+
+  const [userSnap, restSnap] = await Promise.all([
+    getDoc(doc(db, 'users', uid)),
+    getDoc(doc(db, 'userRestaurant', uid)),
+  ]);
+
   if (restSnap.exists()) profiles.push('admin');
+
+  if (userSnap.exists()) {
+    const data = userSnap.data();
+    const role = data.role ?? data.type;
+    // Consumer profile only if explicitly flagged or pure consumer account.
+    // Restaurant-only accounts (with or without role) enter directly without modal.
+    if (role === 'consumer' || data.hasConsumerProfile === true) {
+      profiles.push('consumer');
+    }
+  }
+
   return profiles;
 }
 
@@ -184,7 +200,11 @@ async function getFirestoreUser(firebaseUser: FirebaseUser): Promise<AuthUser | 
   const data = snap.data();
   const saved = localStorage.getItem(PROFILE_KEY) as 'consumer' | 'admin' | null;
   const profiles = await checkAvailableProfiles(firebaseUser.uid);
-  const type: 'consumer' | 'admin' = saved && profiles.includes(saved) ? saved : data.role;
+  if (profiles.length === 0) return null;
+  // usa o perfil salvo se ainda válido, senão o primeiro disponível
+  const type: 'consumer' | 'admin' = saved && profiles.includes(saved)
+    ? saved
+    : (profiles.includes('admin') ? 'admin' : 'consumer');
   return {
     id: firebaseUser.uid,
     name: data.name,

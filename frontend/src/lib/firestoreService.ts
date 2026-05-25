@@ -47,6 +47,7 @@ export interface Reservation {
   people: number;
   status: 'pending' | 'confirmed' | 'cancelled';
   createdAt: string;
+  denyReason?: string;
 }
 
 // ── Utilitário ────────────────────────────────────────────
@@ -270,22 +271,15 @@ export async function getTableByCode(restaurantId: string, code: string): Promis
 }
 
 export async function getDiamondRestaurants(): Promise<Restaurant[]> {
-  // Restaurantes que têm pelo menos uma mesa cadastrada
-  const tablesSnap = await getDocs(query(collection(db, 'tables'), where('active', '==', true)));
-  const ids = [...new Set(tablesSnap.docs.map(d => d.data().restaurantId as string))];
-  if (ids.length === 0) return [];
-
-  const restaurants: Restaurant[] = [];
-  for (const id of ids) {
-    const restSnap = await getDoc(doc(db, 'userRestaurant', id));
-    if (!restSnap.exists()) continue;
-    const data = restSnap.data();
-    restaurants.push({
-      id: restSnap.id,
-      slug: toSlug(data.restaurantName ?? restSnap.id),
+  const snap = await getDocs(query(collection(db, 'userRestaurant'), where('plan', '==', 'diamante')));
+  return snap.docs.map(d => {
+    const data = d.data();
+    return {
+      id: d.id,
+      slug: toSlug(data.restaurantName ?? d.id),
       name: data.restaurantName ?? '',
       logo: data.logo ?? '🍽️',
-      plan: data.plan ?? 'basico',
+      plan: 'diamante',
       rating: data.rating ?? 0,
       category: data.category ?? '',
       distance: data.distance ?? 0,
@@ -294,9 +288,8 @@ export async function getDiamondRestaurants(): Promise<Restaurant[]> {
       minOrder: data.minOrder ?? 0,
       headerColor: data.headerColor ?? '#C92924',
       city: data.city ?? '',
-    } as Restaurant);
-  }
-  return restaurants;
+    } as Restaurant;
+  });
 }
 
 // ── Pedidos na Mesa ────────────────────────────────────────

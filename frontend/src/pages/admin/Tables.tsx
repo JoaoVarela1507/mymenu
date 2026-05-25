@@ -3,7 +3,7 @@ import { Card, PageHeader } from '../../components/shared';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   getRestaurantTables, saveTable, deleteTable,
-  getRestaurantReservations,
+  getRestaurantReservations, getRestaurantByOwnerId,
 } from '../../lib/firestoreService';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
@@ -34,11 +34,19 @@ export default function Tables() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loadingRes, setLoadingRes] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [denyingId, setDenyingId] = useState<string | null>(null);
+  const [denyReason, setDenyReason] = useState('');
+  const [plan, setPlan] = useState<string | null>(null);
+  const [loadingPlan, setLoadingPlan] = useState(true);
 
   const restaurantId = user?.id ?? '';
 
   useEffect(() => {
     if (!restaurantId) return;
+    getRestaurantByOwnerId(restaurantId).then(r => {
+      setPlan(r?.plan ?? 'basico');
+      setLoadingPlan(false);
+    });
     getRestaurantTables(restaurantId).then(t => { setTables(t); setLoadingTables(false); });
     getRestaurantReservations(restaurantId).then(r => { setReservations(r); setLoadingRes(false); });
   }, [restaurantId]);
@@ -67,10 +75,14 @@ export default function Tables() {
     setTables(prev => prev.filter(t => t.id !== id));
   };
 
-  const handleResStatus = async (id: string, status: 'confirmed' | 'cancelled') => {
+  const handleResStatus = async (id: string, status: 'confirmed' | 'cancelled', reason?: string) => {
     setUpdatingId(id);
-    await updateDoc(doc(db, 'reservations', id), { status });
-    setReservations(prev => prev.map(r => r.id === id ? { ...r, status } : r));
+    const update: Record<string, any> = { status };
+    if (status === 'cancelled' && reason?.trim()) update.denyReason = reason.trim();
+    await updateDoc(doc(db, 'reservations', id), update);
+    setReservations(prev => prev.map(r => r.id === id ? { ...r, status, denyReason: reason?.trim() } : r));
+    setDenyingId(null);
+    setDenyReason('');
     setUpdatingId(null);
   };
 
@@ -78,6 +90,41 @@ export default function Tables() {
   const resolved = reservations.filter(r => r.status !== 'pending');
 
   if (user?.type !== 'admin') return null;
+
+  if (loadingPlan) return (
+    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#f8f5ef' }}>
+      <span className="text-[#C92924] font-bold">Carregando...</span>
+    </div>
+  );
+
+  if (plan === 'basico') return (
+    <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center" style={{ backgroundColor: '#f8f5ef' }}>
+      <PageHeader title="Mesas & Reservas" subtitle="Gerencie mesas e solicitações de reserva" icon="🪑" />
+      <div className="max-w-md mt-10">
+        <div className="bg-white border-2 border-yellow-300 rounded-2xl p-8 shadow-lg">
+          <div className="text-6xl mb-4">🔒</div>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Acesso Restrito</h2>
+          <p className="text-gray-500 text-sm mb-4">
+            A funcionalidade de <strong>Mesas & Reservas</strong> não está disponível no <strong>Plano Básico</strong>.
+          </p>
+          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-5 text-left space-y-1.5 text-sm text-gray-700">
+            <p>📅 <strong>Prata, Ouro e Diamante:</strong> Gestão de reservas</p>
+            <p>🪑 <strong>Diamante:</strong> Cadastro de mesas com código único</p>
+            <p>💎 <strong>Diamante:</strong> Pedidos direto da mesa pelo app (Garçom)</p>
+          </div>
+          <p className="text-xs text-gray-400 mb-4">
+            Plano atual: <span className="font-semibold capitalize text-gray-600">{plan}</span>
+          </p>
+          <a
+            href="/admin/plans"
+            className="inline-block w-full py-2.5 bg-[#660000] text-white font-bold rounded-xl hover:bg-[#550000] transition-colors text-sm"
+          >
+            🚀 Ver Planos Disponíveis
+          </a>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#f8f5ef' }}>
@@ -96,17 +143,33 @@ export default function Tables() {
               <span className="ml-2 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5">{pending.length}</span>
             )}
           </button>
-          <button
-            onClick={() => setTab('mesas')}
-            className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${tab === 'mesas' ? 'bg-[#660000] text-white shadow' : 'text-gray-600 hover:text-[#660000]'}`}
-          >
-            🪑 Mesas
-          </button>
+          {plan === 'diamante' && (
+            <button
+              onClick={() => setTab('mesas')}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${tab === 'mesas' ? 'bg-[#660000] text-white shadow' : 'text-gray-600 hover:text-[#660000]'}`}
+            >
+              🪑 Mesas
+            </button>
+          )}
         </div>
 
         {/* ── TAB RESERVAS ── */}
         {tab === 'reservas' && (
           <>
+            {(plan === 'prata' || plan === 'ouro') && (
+              <Card className="bg-blue-50 border border-blue-200">
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl">{plan === 'prata' ? '🥈' : '🥇'}</span>
+                  <div>
+                    <p className="font-bold text-gray-800 text-sm">Plano {plan === 'prata' ? 'Prata' : 'Ouro'} — Reservas disponíveis</p>
+                    <p className="text-xs text-gray-600 mt-0.5">
+                      Você pode gerenciar reservas de clientes. Para habilitar mesas e pedidos direto da mesa, faça upgrade para o{' '}
+                      <a href="/admin/plans" className="text-[#660000] font-semibold hover:underline">Plano Diamante</a>.
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            )}
             {/* Pendentes */}
             <Card>
               <h2 className="text-lg font-bold text-gray-800 mb-4">
@@ -134,20 +197,49 @@ export default function Tables() {
                           </p>
                         </div>
                         <div className="flex flex-col gap-2 flex-shrink-0">
-                          <button
-                            onClick={() => handleResStatus(r.id, 'confirmed')}
-                            disabled={updatingId === r.id}
-                            className="px-4 py-1.5 bg-green-600 text-white text-xs font-bold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-                          >
-                            ✅ Aceitar
-                          </button>
-                          <button
-                            onClick={() => handleResStatus(r.id, 'cancelled')}
-                            disabled={updatingId === r.id}
-                            className="px-4 py-1.5 bg-red-600 text-white text-xs font-bold rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
-                          >
-                            ❌ Negar
-                          </button>
+                          {denyingId === r.id ? (
+                            <div className="flex flex-col gap-2 min-w-[200px]">
+                              <input
+                                autoFocus
+                                value={denyReason}
+                                onChange={e => setDenyReason(e.target.value)}
+                                placeholder="Motivo da recusa (obrigatório)"
+                                className="px-3 py-1.5 text-xs border-2 border-red-300 rounded-lg focus:outline-none focus:border-red-500"
+                              />
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleResStatus(r.id, 'cancelled', denyReason)}
+                                  disabled={!denyReason.trim() || updatingId === r.id}
+                                  className="flex-1 px-3 py-1.5 bg-red-600 text-white text-xs font-bold rounded-lg hover:bg-red-700 transition-colors disabled:opacity-40"
+                                >
+                                  Confirmar
+                                </button>
+                                <button
+                                  onClick={() => { setDenyingId(null); setDenyReason(''); }}
+                                  className="px-3 py-1.5 border border-gray-300 text-gray-600 text-xs rounded-lg hover:bg-gray-50"
+                                >
+                                  Cancelar
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => handleResStatus(r.id, 'confirmed')}
+                                disabled={updatingId === r.id}
+                                className="px-4 py-1.5 bg-green-600 text-white text-xs font-bold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                              >
+                                ✅ Aceitar
+                              </button>
+                              <button
+                                onClick={() => { setDenyingId(r.id); setDenyReason(''); }}
+                                disabled={updatingId === r.id}
+                                className="px-4 py-1.5 bg-red-600 text-white text-xs font-bold rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                              >
+                                ❌ Negar
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>

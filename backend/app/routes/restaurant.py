@@ -9,15 +9,27 @@ router = APIRouter(prefix="/restaurant", tags=["Restaurant"])
 
 @router.get("/check-email")
 async def check_email(email: str = Query(...)):
-    """Verifica se o email já existe no Firebase Auth e se já tem restaurante"""
     fb_auth = get_auth()
     db = get_firestore()
     try:
         user = fb_auth.get_user_by_email(email)
         has_restaurant = db.collection("userRestaurant").document(user.uid).get().exists
-        return {"exists": True, "has_restaurant": has_restaurant}
+        user_doc = db.collection("users").document(user.uid).get()
+        name = ""
+        has_consumer = False
+        if user_doc.exists:
+            data = user_doc.to_dict()
+            name = data.get("name", "")
+            role = data.get("role") or data.get("type")
+            has_consumer = data.get("hasConsumerProfile") is True or role == "consumer"
+        return {
+            "exists": True,
+            "has_restaurant": has_restaurant,
+            "has_consumer": has_consumer,
+            "name": name,
+        }
     except firebase_auth.UserNotFoundError:
-        return {"exists": False, "has_restaurant": False}
+        return {"exists": False, "has_restaurant": False, "has_consumer": False, "name": ""}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -65,11 +77,13 @@ async def register_restaurant(request: RegisterRestaurantRequest):
 
     try:
         # Atualiza role para admin (merge para não sobrescrever outros campos)
+        # hasConsumerProfile=True permite que o dono acesse o app como cliente também
         db.collection("users").document(uid).set({
             "name": request.name,
             "email": request.email,
             "phone": request.phone,
             "role": "admin",
+            "hasConsumerProfile": True,
             "createdAt": SERVER_TIMESTAMP,
         }, merge=True)
 

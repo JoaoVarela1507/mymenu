@@ -1,9 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Input, Button, ImageCarousel } from '../../components/shared';
 import { authService } from '../../services/api';
 import { loginWithGoogle } from '../../services/authService';
 import { useAuth } from '../../contexts/AuthContext';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { doc, updateDoc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../../lib/firebase';
 import '../login/Login';
 
 export default function SignupConsumer() {
@@ -15,7 +18,7 @@ export default function SignupConsumer() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [emailChecking, setEmailChecking] = useState(false);
-  const [emailInfo, setEmailInfo] = useState<'free' | 'has_restaurant' | null>(null);
+  const [emailInfo, setEmailInfo] = useState<'free' | 'has_restaurant' | 'both_profiles' | null>(null);
 
   const checkEmail = async (email: string) => {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
@@ -23,15 +26,27 @@ export default function SignupConsumer() {
     try {
       const res = await fetch(`http://localhost:8000/restaurant/check-email?email=${encodeURIComponent(email)}`);
       const data = await res.json();
-      setEmailInfo(data.exists ? 'has_restaurant' : 'free');
+      if (!data.exists) {
+        setEmailInfo('free');
+      } else {
+        if (data.name) setName(data.name);
+        if (data.has_restaurant && data.has_consumer) {
+          setEmailInfo('both_profiles');
+        } else if (data.has_restaurant) {
+          setEmailInfo('has_restaurant');
+        } else {
+          setEmailInfo('both_profiles');
+        }
+      }
     } catch {}
     setEmailChecking(false);
   };
   const navigate = useNavigate();
   const { user } = useAuth();
+  const suppressRedirect = useRef(false);
 
   useEffect(() => {
-    if (user) navigate('/', { replace: true });
+    if (user && !suppressRedirect.current) navigate('/', { replace: true });
   }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -52,6 +67,7 @@ export default function SignupConsumer() {
     }
 
     try {
+      suppressRedirect.current = true;
       const response = await authService.registerConsumer({
         name,
         email,
@@ -60,15 +76,43 @@ export default function SignupConsumer() {
       });
 
       if (response.success) {
-        navigate('/');
+        await signOut(auth);
+        navigate('/login');
       } else {
+        suppressRedirect.current = false;
         setError(response.message || 'Erro ao criar conta. Tente outro email.');
       }
     } catch (err) {
+      suppressRedirect.current = false;
       setError('Erro ao conectar ao servidor. Verifique sua conexão.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAddConsumerProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const { user } = await signInWithEmailAndPassword(auth, email, password);
+      const snap = await getDoc(doc(db, 'users', user.uid));
+      const data = snap.data();
+      // Seed accounts use 'type' not 'role' — block consumer profile addition for them
+      if (!data?.role) {
+        await signOut(auth);
+        setError('Esta conta não permite cadastro de perfil consumidor.');
+        setLoading(false);
+        return;
+      }
+      await updateDoc(doc(db, 'users', user.uid), { hasConsumerProfile: true });
+      // Sign out so the next login goes through the full flow and shows the profile modal
+      await signOut(auth);
+      navigate('/login', { state: { linked: true } });
+    } catch {
+      setError('Senha incorreta. Verifique e tente novamente.');
+    }
+    setLoading(false);
   };
 
   const handleGoogle = async () => {
@@ -144,22 +188,12 @@ export default function SignupConsumer() {
               <p className="text-xs text-[#C92924]/70 m-0 whitespace-nowrap">Complete seus dados para criar a conta</p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <Input
-                label="Nome Completo"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Seu nome"
-                className="px-3 py-1.5 text-sm"
-                required
-              />
-
+            <div className="space-y-4">
               <Input
                 label="Email"
                 type="email"
                 value={email}
-                onChange={(e) => { setEmail(e.target.value); setEmailInfo(null); }}
+                onChange={(e) => { setEmail(e.target.value); setEmailInfo(null); setName(''); }}
                 onBlur={(e) => checkEmail(e.target.value)}
                 placeholder="seu@email.com"
                 className="px-3 py-1.5 text-sm"
@@ -169,15 +203,58 @@ export default function SignupConsumer() {
               {emailChecking && (
                 <p className="text-xs text-gray-400">Verificando email...</p>
               )}
-              {emailInfo === 'has_restaurant' && (
-                <div className="bg-amber-50 border border-amber-300 rounded-lg p-3">
-                  <p className="text-amber-700 text-xs font-medium">⚠️ Este email já possui uma conta. <strong>Não é necessário criar outra conta</strong> — faça login com sua senha atual e escolha o perfil Consumidor.</p>
-                  <Link to="/login" className="inline-block mt-2 text-xs font-bold text-amber-800 underline">Ir para o login →</Link>
-                </div>
-              )}
+            </div>
 
-              {emailInfo !== 'has_restaurant' && (
+            {emailInfo === 'both_profiles' ? (
+              <div className="bg-red-50 border border-red-300 rounded-xl p-4 mt-4">
+                <p className="text-red-800 text-sm font-bold mb-1">🚫 Olá, {name || 'usuário'}!</p>
+                <p className="text-red-700 text-xs">Este email já possui os dois perfis cadastrados — <strong>Restaurante</strong> e <strong>Consumidor</strong>. Não é possível criar mais usuários com este email. Faça login para acessar sua conta.</p>
+                <Link to="/login" style={{ display: 'block', marginTop: '12px', textAlign: 'center', padding: '8px 16px', borderRadius: '8px', backgroundColor: '#C92924', color: '#fff', fontSize: '12px', fontWeight: 'bold', textDecoration: 'none' }}>
+                  Ir para o login
+                </Link>
+              </div>
+            ) : emailInfo === 'has_restaurant' ? (
               <>
+                <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 mt-4">
+                  <p className="text-amber-800 text-sm font-bold mb-1">👋 Olá, {name || 'usuário'}!</p>
+                  <p className="text-amber-700 text-xs">Identificamos que este email já possui uma conta de restaurante. Ao continuar, um perfil <strong>Consumidor</strong> será adicionado à sua conta — <strong>o nome e a senha serão os mesmos</strong> da conta existente.</p>
+                </div>
+                <form onSubmit={handleAddConsumerProfile} className="space-y-3 mt-4">
+                <Input
+                  label="Senha (da sua conta atual)"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Digite sua senha atual"
+                  className="px-3 py-1.5 text-sm"
+                  required
+                />
+                {error && (
+                  <div className="bg-red-100/80 border border-red-300 rounded-lg p-2">
+                    <p className="text-red-700 text-xs font-medium">{error}</p>
+                  </div>
+                )}
+                <Button
+                  type="submit"
+                  variant="primary"
+                  className="w-full py-2 font-bold text-sm button-depth rounded-full bg-[#C92924] hover:bg-[#A02219]"
+                  disabled={loading}
+                >
+                  {loading ? 'Vinculando...' : 'Adicionar perfil Consumidor'}
+                </Button>
+              </form>
+              </>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+              <Input
+                label="Nome Completo"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Seu nome"
+                className="px-3 py-1.5 text-sm"
+                required
+              />
               <Input
                 label="Senha"
                 type="password"
@@ -234,9 +311,8 @@ export default function SignupConsumer() {
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-4 h-4" />
                 Cadastrar com Google
               </button>
-              </>
-              )}
-            </form>
+              </form>
+            )}
 
             <div className="text-center pt-4 border-t border-[#D4AF37]/30 mt-4">
               <p className="text-[#C92924]/70 text-xs mb-2">Já tem uma conta?</p>

@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { auth, db } from '../../lib/firebase';
+
 import { Input, Button, ImageCarousel } from '../../components/shared';
-import { findUserByEmail, sendPasswordResetEmail } from '../../lib/mockPasswordRecovery';
 import './Login.css';
 
 export default function ForgotPassword() {
@@ -12,27 +15,41 @@ export default function ForgotPassword() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    setTimeout(() => {
-      const user = findUserByEmail(email);
-      
-      if (user) {
-        if (sendPasswordResetEmail(email)) {
-          setUserInfo({
-            name: user.name,
-            userType: user.userType === 'restaurant' ? 'Restaurante' : 'Consumidor'
-          });
-          setStep('success');
+    try {
+      // 1. Envia o email de reset pelo Firebase Auth (não exige permissão Firestore)
+      await sendPasswordResetEmail(auth, email);
+
+      // 2. Tenta buscar nome/tipo no Firestore — falha silenciosa se sem permissão
+      let name = '';
+      let userType = 'Consumidor';
+      try {
+        const usersSnap = await getDocs(query(collection(db, 'users'), where('email', '==', email)));
+        if (!usersSnap.empty) {
+          const data = usersSnap.docs[0].data();
+          name = data.name ?? '';
+          userType = (data.type === 'admin' || data.role === 'admin') ? 'Restaurante' : 'Consumidor';
         }
-      } else {
+      } catch (_) { /* sem permissão — ignora, o email já foi enviado */ }
+
+      setUserInfo({ name, userType });
+      setStep('success');
+    } catch (err: any) {
+      const code = err?.code ?? '';
+      if (code === 'auth/user-not-found' || code === 'auth/invalid-email' || code === 'auth/invalid-credential') {
         setError('Email não encontrado em nosso sistema');
+      } else if (code === 'auth/too-many-requests') {
+        setError('Muitas tentativas. Aguarde alguns minutos e tente novamente.');
+      } else {
+        setError('Erro ao enviar o email. Tente novamente.');
       }
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   const handleReset = () => {

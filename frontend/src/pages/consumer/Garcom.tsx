@@ -141,6 +141,57 @@ export default function Garcom() {
         {/* ── Selecionar restaurante ── */}
         {step === 'select' && (
           <div className="space-y-4">
+
+            {/* Cards diamante */}
+            {!loadingRests && restaurants.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-lg">💎</span>
+                  <p className="text-sm font-bold text-gray-700">Disponíveis agora</p>
+                  <span className="text-xs bg-yellow-100 text-yellow-700 font-semibold px-2 py-0.5 rounded-full border border-yellow-300">Plano Diamante</span>
+                </div>
+                <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1" style={{ scrollbarWidth: 'none' }}>
+                  {restaurants.map(r => (
+                    <button
+                      key={r.id}
+                      onClick={() => handleSelectRest(r)}
+                      className="flex-shrink-0 w-40 rounded-2xl overflow-hidden border-2 border-transparent hover:border-[#C92924] transition-all shadow-md hover:shadow-lg group"
+                    >
+                      {/* Header colorido */}
+                      <div
+                        className="h-20 flex items-center justify-center text-4xl relative"
+                        style={{ backgroundColor: r.headerColor || '#C92924' }}
+                      >
+                        {r.logo}
+                        <span className="absolute top-1.5 right-1.5 text-[10px] bg-yellow-400 text-yellow-900 font-bold px-1.5 py-0.5 rounded-full leading-none">
+                          💎
+                        </span>
+                      </div>
+                      {/* Info */}
+                      <div className="bg-white px-3 py-2 text-left">
+                        <p className="font-bold text-gray-800 text-xs truncate leading-tight">{r.name}</p>
+                        <p className="text-[11px] text-gray-500 truncate">{r.category}</p>
+                        <div className="flex items-center justify-between mt-1.5">
+                          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${r.isOpen ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                            {r.isOpen ? '● Aberto' : '● Fechado'}
+                          </span>
+                          <span className="text-[10px] text-gray-400">{r.deliveryTime}</span>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {loadingRests && (
+              <div className="flex gap-3 overflow-x-auto pb-2">
+                {[1,2,3].map(i => (
+                  <div key={i} className="flex-shrink-0 w-40 h-36 rounded-2xl bg-gray-100 animate-pulse" />
+                ))}
+              </div>
+            )}
+
             {/* Campo de busca com autocomplete */}
             <div className="relative">
               <label className="block text-sm font-semibold text-gray-700 mb-1">

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Input, Button, ImageCarousel } from '../../components/shared';
 import './Login.css';
@@ -7,11 +7,14 @@ import './Login.css';
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [profileModal, setProfileModal] = useState<{ email: string; password: string } | null>(null);
-  const { login, loginWithProfile, loginWithGoogle, user } = useAuth();
+  const { login, loginWithProfile, cancelProfileChoice, loginWithGoogle, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const linkedSuccess = (location.state as any)?.linked === true;
 
   useEffect(() => {
     if (user) navigate('/', { replace: true });
@@ -25,7 +28,7 @@ export default function Login() {
     const result = await login({ email, password });
 
     if (result.success && result.needsProfileChoice) {
-      setProfileModal({ email, password });
+      setProfileModal({ email: '', password: '' });
     } else if (result.success) {
       navigate('/');
     } else {
@@ -100,7 +103,7 @@ export default function Login() {
               </button>
             </div>
             <button
-              onClick={() => setProfileModal(null)}
+              onClick={() => { setProfileModal(null); cancelProfileChoice(); }}
               className="w-full mt-4 text-xs text-gray-400 hover:text-gray-600 transition-colors"
             >
               Cancelar
@@ -134,6 +137,12 @@ export default function Login() {
           <p className="text-[#C92924] font-medium text-xs">Acesse sua conta para continuar</p>
         </div>
 
+        {linkedSuccess && (
+          <div className="bg-green-50 border border-green-300 rounded-lg p-2.5 mb-2">
+            <p className="text-green-700 text-xs font-semibold">✅ Perfil Consumidor vinculado! Faça login para escolher qual perfil usar.</p>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-1">
           <div className="space-y-1">
             <Input
@@ -146,15 +155,37 @@ export default function Login() {
               required
             />
 
-            <Input
-              label="Senha"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••"
-              className="px-3 py-1.5 text-sm"
-              required
-            />
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-[#C92924]">Senha</label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••"
+                  required
+                  className="w-full bg-white border-2 border-dark/20 rounded-lg px-3 py-1.5 text-sm pr-10 focus:border-primary focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#C92924] transition-colors"
+                  style={{ width: 'auto', padding: 0 }}
+                  tabIndex={-1}
+                >
+                  {showPassword ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            </div>
             <div className="flex justify-end mt-1">
               <Link to="/recuperar-senha" className="text-[#C92924]/70 text-xs hover:text-[#C92924]">
                 Esqueci minha senha
